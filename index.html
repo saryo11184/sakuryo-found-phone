@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>咲哉手机 · 可视化编辑器</title>
+<style>
+:root{color-scheme:light;--ink:#282a2d;--muted:#898d92;--yellow:#fee500;--room:#b9c0c8;--line:#eceef0}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#f2f0eb;color:var(--ink);font-family:Inter,"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif}
+.stage{min-height:100vh;padding:36px 24px 44px;display:flex;align-items:center;justify-content:center;gap:58px;background:radial-gradient(ellipse at 50% 42%,#faf9f6 0,#f2f0eb 62%,#ebe8e1 100%)}
+.intro{width:min(310px,32vw);align-self:center}
+.eyebrow{font-size:11px;letter-spacing:.17em;color:#7d817f;font-weight:700;text-transform:uppercase}
+h1{font-family:"Noto Serif SC","Songti SC",serif;font-size:32px;line-height:1.25;font-weight:600;margin:13px 0 12px}
+.intro p{font-size:14px;line-height:1.85;color:#64696d;margin:0}
+.source-note{margin-top:23px;padding:14px 15px;border:1px solid #e4e1da;border-radius:15px;background:#ffffffa6;font-size:12px;line-height:1.75;color:#6f7476}
+.source-note strong{color:#3a3d3d;font-weight:650}
+.phone-wrap{position:relative;padding:12px;border-radius:48px;background:#202124;box-shadow:0 30px 80px #3334,0 5px 15px #3332}
+.phone{width:390px;height:min(820px,calc(100vh - 50px));min-height:630px;border-radius:37px;overflow:hidden;background:#fff;display:flex;flex-direction:column;position:relative}
+.status{height:37px;flex:none;padding:9px 25px 4px;display:flex;justify-content:space-between;align-items:center;background:var(--yellow);font-size:12px;font-weight:700}
+.status-icons{display:flex;gap:6px;align-items:center}
+.signal{display:inline-flex;align-items:flex-end;gap:2px;height:12px}
+.signal i{display:block;width:3px;background:#242526;border-radius:2px}
+.signal i:nth-child(1){height:4px}.signal i:nth-child(2){height:6px}.signal i:nth-child(3){height:9px}.signal i:nth-child(4){height:11px}
+.battery{width:19px;height:10px;border:1.5px solid #242526;border-radius:3px;position:relative}
+.battery:before{content:"";position:absolute;right:-3px;top:2px;height:4px;width:2px;border-radius:0 2px 2px 0;background:#242526}
+.battery:after{content:"";position:absolute;left:2px;top:2px;width:11px;height:4px;background:#242526;border-radius:1px}
+.appbar{height:56px;flex:none;padding:0 21px;background:var(--yellow);display:flex;align-items:center;justify-content:space-between}
+.app-title{font-size:20px;font-weight:750;letter-spacing:-.04em}
+.app-actions{display:flex;gap:19px;align-items:center}
+.icon-button{border:0;background:transparent;color:#202124;width:25px;height:30px;display:grid;place-items:center;font-size:22px;padding:0;cursor:pointer}
+.search-box{display:none;padding:8px 16px;background:#fff6b5}
+.search-box.open{display:block}
+.search-box input{width:100%;border:0;border-radius:9px;background:#fff;padding:10px 12px;font:inherit;outline:none}
+.list-tabs{height:45px;flex:none;display:flex;align-items:stretch;padding:0 22px;gap:29px;border-bottom:1px solid #f0f0ee}
+.list-tabs button{border:0;background:none;color:#9a9da0;font:inherit;font-size:13px;padding:0;position:relative}
+.list-tabs button.active{color:#242629;font-weight:700}
+.list-tabs button.active:after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:3px;background:#282a2d}
+.screen{flex:1;min-height:0;display:flex;flex-direction:column}
+.chat-list{overflow:auto;flex:1}
+.list-label{padding:15px 22px 8px;color:#96999c;font-size:11px;letter-spacing:.03em}
+.chat-row{display:flex;align-items:center;padding:12px 19px;gap:13px;cursor:pointer;transition:background .16s}
+.chat-row:hover{background:#faf8ed}
+.group-avatar{width:51px;height:51px;border-radius:18px;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:6px;background:#f2c94c;overflow:hidden}
+.mini-face{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:750;font-size:9px}
+.face-sion{background:#7d92ad}.face-sakuya{background:#e5a59a}.face-riku{background:#9aab82}.face-jaehee{background:#9d8daf}
+.row-copy{min-width:0;flex:1}
+.row-heading{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.row-name{font-size:15px;font-weight:700;white-space:nowrap}
+.row-time{font-size:10px;color:#a2a5a7;white-space:nowrap}
+.row-preview{margin-top:5px;color:#92969a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unread{margin-left:5px;background:#f16c5d;color:white;min-width:24px;height:19px;padding:0 5px;border-radius:11px;font-size:10px;font-weight:700;display:grid;place-items:center}
+.list-footer{padding:15px 20px;color:#b0b2b3;font-size:10px;text-align:center}
+.bottom-nav{height:57px;flex:none;border-top:1px solid #f1f1ef;display:flex;justify-content:space-around;align-items:center;color:#a3a6a8;font-size:10px}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav-symbol{font-size:19px;line-height:1}
+.nav-item.selected{color:#323436}
+.chat-screen{display:none;min-height:0;flex:1;flex-direction:column;background:#b9c0c8}
+.chat-screen.open{display:flex}
+.chat-header{height:55px;flex:none;background:var(--yellow);display:flex;align-items:center;gap:10px;padding:0 12px}
+.back-button{border:0;background:none;font-size:25px;line-height:1;cursor:pointer;width:25px;padding:0;color:#292b2d}
+.chat-heading{min-width:0;flex:1}
+.chat-name{font-size:16px;font-weight:750;line-height:1.2}
+.chat-members{font-size:10px;color:#6e6d5f;margin-top:3px}
+.header-menu{background:transparent;border:0;font-size:22px;width:27px;cursor:pointer}
+.member-sheet{display:none;position:absolute;z-index:5;top:128px;left:12px;right:12px;padding:17px 18px;background:#fff;border-radius:0 0 18px 18px;box-shadow:0 8px 25px #0002}
+.member-sheet.open{display:block}
+.member-sheet-title{font-size:13px;font-weight:700;margin-bottom:12px}
+.member-list{display:flex;flex-wrap:wrap;gap:7px}
+.member-chip{background:#f3f4f5;border-radius:18px;padding:7px 10px;font-size:11px;color:#515559}
+.message-area{overflow:auto;overscroll-behavior:contain;flex:1;padding:14px 12px 20px;scrollbar-width:thin;scrollbar-color:#ffffff55 transparent}
+.date-pill{width:max-content;max-width:90%;margin:0 auto 15px;background:#939aa27a;color:#fff;border-radius:14px;padding:6px 10px;font-size:10px;letter-spacing:.02em}
+.system-event{width:max-content;max-width:92%;margin:11px auto;display:flex;align-items:center;gap:8px;border-radius:15px;background:#939aa27a;color:#fff;padding:6px 10px;font-size:10px;line-height:1.45;text-align:center}
+.system-time{font-size:9px;color:#ffffffce;white-space:nowrap}
+.message-row{display:flex;align-items:flex-end;gap:7px;margin:7px 0;max-width:100%}
+.message-row.self{justify-content:flex-end}
+.avatar{width:31px;height:31px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;font-weight:750;font-size:10px;box-shadow:0 1px 2px #0002}
+.avatar-Sion{background:#758da9}.avatar-Sakuya{background:#d78e83}.avatar-Riku{background:#899b73}.avatar-Jaehee,.avatar-Jaehhe,.avatar-Jahee{background:#9682a9}.avatar-Yushi{background:#6ca49a}.avatar-Manager{background:#59616b}
+.message-column{max-width:76%;min-width:0;display:flex;flex-direction:column}
+.message-row.self .message-column{align-items:flex-end}
+.sender{font-size:10px;color:#45494d;margin:0 0 4px 2px;line-height:1.15}
+.message-inner{display:flex;align-items:flex-end;gap:4px;max-width:100%}
+.message-row.self .message-inner{flex-direction:row-reverse}
+.bubble{max-width:100%;width:max-content;padding:8px 10px;border-radius:3px 14px 14px 14px;background:#fff;color:#282a2c;font-size:12px;line-height:1.55;overflow-wrap:anywhere;box-shadow:0 1px 1px #2221}
+.message-row.self .bubble{background:#fee500;border-radius:14px 3px 14px 14px}
+.message-row.continued .avatar,.message-row.continued .sender{visibility:hidden}
+.message-time{flex:none;color:#fff;font-size:9px;white-space:nowrap;padding-bottom:2px;text-shadow:0 1px 2px #5555}
+.reply-quote{border-left:2px solid #d9dce0;background:#f1f2f3;color:#7e8285;border-radius:4px;padding:4px 6px;margin:0 0 5px;font-size:10px;line-height:1.35}
+.message-row.self .reply-quote{background:#f5df24;color:#6b641d;border-color:#c3ad10}
+.sticker-placeholder{display:inline-block;margin-left:2px;padding:2px 5px;border:1px dashed #cbb534;border-radius:8px;background:#fff7bd;color:#615800;font-size:10px;white-space:nowrap}
+.composer{height:55px;flex:none;display:flex;align-items:center;gap:10px;padding:7px 12px;background:#f6f7f8}
+.plus-button{border:0;background:none;font-size:23px;color:#858a8e;padding:0;line-height:1}
+.fake-input{height:37px;flex:1;border-radius:19px;background:#fff;color:#a5a8ab;padding:10px 13px;font-size:11px}
+.smile{font-size:20px;color:#8b9093}
+.jump-latest{display:none;position:absolute;right:25px;bottom:73px;border:0;border-radius:20px;padding:8px 12px;background:#fff;color:#555;box-shadow:0 2px 10px #3332;font-size:10px;cursor:pointer}
+.jump-latest.visible{display:block}
+.preview-footer{width:min(310px,32vw);margin-top:16px;font-size:10px;line-height:1.6;color:#929692}
+@media(max-width:850px){.stage{gap:24px;padding:22px 15px}.intro{width:min(255px,30vw)}.preview-footer{width:min(255px,30vw)}}
+@media(max-width:650px){.stage{min-height:100dvh;padding:0;display:block;background:#202124}.intro{display:none}.phone-wrap{padding:0;border-radius:0;background:none;box-shadow:none}.phone{width:100vw;height:100dvh;min-height:0;border-radius:0}.status{padding-left:24px;padding-right:24px}.phone-wrap{min-height:100dvh}}
+.stage{display:grid;grid-template-columns:minmax(220px,270px) minmax(350px,390px) minmax(360px,470px);align-items:center;gap:32px;padding:26px}
+.intro{width:auto}
+.phone-wrap{justify-self:center}
+.editor-panel{width:100%;max-height:calc(100vh - 32px);overflow:auto;align-self:start;position:sticky;top:16px;padding:19px;border:1px solid #e4e1da;border-radius:22px;background:#fffdf9;box-shadow:0 15px 45px #27252212;color:#313538}
+.editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:15px}
+.editor-eyebrow{font-size:10px;letter-spacing:.16em;color:#8c8f8b;font-weight:750}
+.editor-head h2{font-family:"Noto Serif SC","Songti SC",serif;font-size:23px;margin:5px 0 4px}
+.editor-head p{font-size:11px;color:#858a8c;line-height:1.55;margin:0}
+.save-status{white-space:nowrap;border-radius:20px;background:#edf5eb;color:#597c57;padding:6px 9px;font-size:10px}
+.backup-row{display:flex;gap:8px;margin:14px 0 16px}
+.editor-button,.backup-row label{border:1px solid #deded8;border-radius:10px;background:#fff;color:#4b5052;font:inherit;font-size:11px;padding:8px 10px;cursor:pointer}
+.editor-button:hover,.backup-row label:hover{background:#f6f3ea}
+.editor-button.primary{background:#282a2d;color:#fff;border-color:#282a2d}
+.editor-button.danger{color:#b44e45;border-color:#ebd4cf}
+.backup-row input[type=file],.avatar-file{display:none}
+.editor-tabs{display:flex;gap:5px;padding:4px;border-radius:12px;background:#f0eee8;margin-bottom:15px}
+.editor-tabs button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 8px;color:#777b7c;font:inherit;font-size:12px;cursor:pointer}
+.editor-tabs button.active{background:#fff;color:#2e3234;font-weight:700;box-shadow:0 1px 4px #0001}
+.editor-view{display:none}.editor-view.active{display:block}
+.editor-label{display:block;font-size:10px;color:#777c7d;font-weight:700;margin:0 0 5px}
+.editor-panel input,.editor-panel select,.editor-panel textarea{width:100%;border:1px solid #dedfdb;border-radius:9px;background:#fff;color:#303436;padding:9px 10px;font:inherit;font-size:12px;outline:none}
+.editor-panel input:focus,.editor-panel select:focus,.editor-panel textarea:focus{border-color:#b3a77d;box-shadow:0 0 0 3px #d8c88725}
+.editor-panel textarea{resize:vertical;min-height:54px;line-height:1.55}
+.editor-field{margin-bottom:12px}
+.editor-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.editor-row .editor-field{min-width:0}
+.room-select-row{display:flex;align-items:flex-end;gap:8px;margin-bottom:14px}
+.room-select-row .editor-field{flex:1;margin:0}
+.member-picker{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid #e3e3de;border-radius:10px;background:#fff}
+.member-option{display:flex;align-items:center;gap:5px;border-radius:20px;background:#f5f5f1;padding:5px 8px;font-size:10px;color:#53595a}
+.member-option input{width:13px;height:13px;margin:0;accent-color:#6b8171}
+.section-heading{display:flex;justify-content:space-between;align-items:center;margin:18px 0 8px}
+.section-heading strong{font-size:12px}
+.section-heading span{font-size:10px;color:#939798}
+.message-search{margin-bottom:8px}
+.message-editor-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;padding-right:3px}
+.message-editor-list:empty:after{content:"还没有消息，点击下方添加";padding:15px;text-align:center;color:#999;font-size:11px}
+.message-card{border:1px solid #e6e5df;border-radius:12px;background:#fff;padding:9px}
+.message-card[hidden]{display:none}
+.message-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;color:#858a8b;font-size:10px}
+.message-card-actions{display:flex;gap:4px}
+.message-card-actions button{border:1px solid #e5e4de;border-radius:7px;background:#fff;color:#64696a;padding:3px 7px;font-size:10px;cursor:pointer}
+.message-fields{display:grid;grid-template-columns:minmax(95px,1fr) 85px;gap:7px}
+.message-fields .editor-field{margin:0;min-width:0}
+.message-fields .message-text-field,.message-fields .message-reply-field{grid-column:1/-1}
+.message-fields .editor-label{font-size:9px;margin-bottom:3px}
+.message-fields input,.message-fields select,.message-fields textarea{padding:7px 8px;font-size:11px}
+.message-fields textarea{min-height:44px}
+.profile-preview-row{display:flex;align-items:center;gap:11px;margin:0 0 13px}
+.profile-preview-avatar{width:48px;height:48px;border-radius:16px;flex:none;display:grid;place-items:center;overflow:hidden;background:#d9d4c9;color:#fff;font-weight:750;font-size:14px}
+.profile-preview-copy{min-width:0}.profile-preview-copy strong{display:block;font-size:12px}.profile-preview-copy span{display:block;margin-top:4px;color:#888d8e;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avatar-actions{display:flex;gap:7px;align-items:center}.avatar-actions .editor-button{white-space:nowrap}
+.avatar-actions .editor-field{flex:1;min-width:0}
+.editor-help{margin:8px 0 0;font-size:10px;line-height:1.5;color:#999e9e}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.mini-face img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.member-chip{display:inline-flex;align-items:center;gap:4px}
+.member-meta{display:block;margin-top:2px;font-size:9px;color:#9a9ea0}
+.legacy-open-chat{position:absolute!important;visibility:hidden!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
+.home-screen{position:absolute;z-index:6;inset:37px 0 0;display:flex;flex-direction:column;padding:23px 20px 14px;background:linear-gradient(155deg,#dbe6e8 0%,#d6d8cf 48%,#e9ded5 100%);color:#293037}
+.home-top{display:flex;align-items:flex-start;justify-content:space-between;margin:3px 3px 25px}.home-date{font-family:"Noto Serif SC","Songti SC",serif;font-size:22px;font-weight:650}.home-caption{margin-top:4px;font-size:11px;color:#586066}.home-lock{border:1px solid #ffffff9c;border-radius:20px;padding:8px 12px;background:#ffffff69;color:#30383c;font:inherit;font-size:11px;cursor:pointer}
+.app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:19px 10px;padding:4px 0}.app-icon{border:0;background:none;color:inherit;font:inherit;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;min-width:0}.app-glyph{width:56px;height:56px;border-radius:18px;background:#ffffffd9;display:grid;place-items:center;font-size:24px;box-shadow:0 5px 12px #35404818}.app-label{font-size:10px;text-align:center;white-space:nowrap}.home-dock{margin-top:auto;display:flex;justify-content:center;gap:13px;padding:12px;border:1px solid #ffffff83;border-radius:25px;background:#ffffff5c;backdrop-filter:blur(12px)}.home-dock .app-glyph{width:49px;height:49px;border-radius:15px}
+.app-screen{display:none;flex:1;min-height:0;flex-direction:column;background:#f7f7f5}.app-screen.open{display:flex}.app-screen-header{height:58px;flex:none;padding:0 15px;display:flex;align-items:center;gap:10px;background:#fff;border-bottom:1px solid #ececea}.app-screen-header button{border:0;background:none;font-size:25px;cursor:pointer}.app-screen-title{font-size:17px;font-weight:720;flex:1}.app-screen-content{overflow:auto;flex:1;padding:15px 16px 22px}.app-screen-hint{font-size:11px;line-height:1.6;color:#929697;padding:10px 2px}.phone-card{padding:13px;margin-bottom:9px;border-radius:15px;background:white;box-shadow:0 2px 8px #242a2b0a}.phone-card-title{font-size:13px;font-weight:700}.phone-card-meta{font-size:10px;color:#979b9d;margin-top:5px}.phone-card-body{font-size:12px;line-height:1.65;white-space:pre-wrap;margin-top:8px;overflow-wrap:anywhere}.phone-empty{padding:35px 16px;text-align:center;color:#989c9e;font-size:12px;line-height:1.8}.phone-primary{border:0;border-radius:12px;background:#282a2d;color:#fff;padding:10px 13px;font:inherit;font-size:11px;cursor:pointer}.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.gallery-tile{aspect-ratio:1;border:0;border-radius:5px;background:#e8e6e0;overflow:hidden;display:grid;place-items:center;color:#8e9190;font-size:10px;text-align:center;padding:5px}.gallery-tile img{width:100%;height:100%;object-fit:cover}.gallery-tools{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.phone-form-field{display:block;margin:0 0 12px;font-size:11px;color:#777}.phone-form-field input,.phone-form-field select{display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #e2e2dd;border-radius:9px;background:#fff;font:inherit;color:#333}
+.lock-screen{position:absolute;z-index:8;inset:37px 0 0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:28px;background:linear-gradient(160deg,#e1e5e5,#d5d6ce 60%,#e8ddd5);text-align:center}.lock-screen.open{display:flex}.lock-time{font-family:"Noto Serif SC","Songti SC",serif;font-size:62px;line-height:1}.lock-date{margin:12px 0 40px;color:#586066;font-size:13px}.lock-title{font-size:18px;font-weight:700}.lock-copy{max-width:245px;margin:9px 0 18px;color:#747b7d;font-size:11px;line-height:1.6}.lock-entry{width:min(240px,100%);padding:12px;border:1px solid #ffffffb3;border-radius:12px;background:#ffffffa6;font-size:16px;text-align:center;letter-spacing:.35em}.lock-action{margin-top:12px;border:0;border-radius:12px;padding:11px 24px;background:#283034;color:white;font:inherit;cursor:pointer}.lock-error{min-height:18px;margin-top:9px;color:#b24e44;font-size:11px}
+.data-record-actions{display:flex;gap:6px}.data-record-button{border:1px solid #e2e1da;border-radius:8px;background:#fff;padding:6px 9px;font:inherit;font-size:10px;cursor:pointer}.data-record-button.active{background:#333;color:#fff}.data-record-list{display:flex;gap:6px;overflow:auto;margin:0 0 12px;padding:2px}.data-record-list button{flex:none}.data-editor-fields{padding-top:4px}
+.dial-number{width:100%;border:0;border-bottom:1px solid #ececea;background:transparent;padding:8px 5px;margin-bottom:12px;text-align:center;font:inherit;font-size:20px;letter-spacing:.08em}.dialpad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px auto 12px;max-width:250px}.dialpad button{height:41px;border:0;border-radius:12px;background:#f3f3f0;font:inherit;font-size:16px;cursor:pointer}.dialer-hint{font-size:9px;text-align:center;color:#999;margin:0 0 8px}
+@media(max-width:760px){.home-screen{padding:24px 24px 18px}.app-grid{gap:20px 12px}.app-glyph{width:58px;height:58px}.app-screen-header{padding-left:18px}.app-screen-content{padding-left:18px;padding-right:18px}}
+@media(max-width:1180px){.stage{grid-template-columns:minmax(330px,390px) minmax(350px,1fr);gap:22px;padding:20px}.intro{display:none}.editor-panel{max-height:calc(100vh - 28px);top:14px}.message-editor-list{max-height:48vh}}
+@media(max-width:760px){.stage{display:block;min-height:100dvh;padding:0 0 20px;background:#f2f0eb}.intro{display:none}.phone-wrap{width:min(100%,430px);min-height:100dvh;margin:0 auto;padding:0;border-radius:0;background:none;box-shadow:none}.phone{width:100%;height:100dvh;min-height:0;border-radius:0}.editor-panel{position:static;width:calc(100% - 22px);max-height:none;margin:12px auto 0;padding:16px;border-radius:18px}.message-editor-list{max-height:55vh}}
+.phone-wrap{padding:11px;border-radius:55px;background:linear-gradient(135deg,#414247,#151619 35%,#414247 70%,#090a0b);box-shadow:0 32px 90px #25242145,0 4px 14px #1919195c}
+.phone{width:402px;height:min(874px,calc(100vh - 38px));min-height:680px;border:1px solid #090a0b;border-radius:47px;background:#f7f7f8;box-shadow:inset 0 0 0 1px #ffffff2a;overflow:hidden}
+.phone:before{content:"";position:absolute;z-index:11;inset:0;border:1px solid #ffffff27;border-radius:47px;pointer-events:none}
+.hardware-button{position:absolute;z-index:1;width:4px;border-radius:4px;background:#53545a}.hardware-volume{left:7px;top:132px;height:86px;box-shadow:0 98px #53545a}.hardware-action{right:7px;top:174px;height:118px}
+.status{position:relative;z-index:12;height:48px;padding:14px 26px 3px;background:transparent;color:#17191b;font-size:12px}.dynamic-island{position:absolute;z-index:14;left:50%;top:8px;transform:translateX(-50%);width:119px;height:32px;border-radius:20px;background:#050505;box-shadow:0 1px 2px #0006;display:flex;align-items:center;justify-content:space-between;padding:0 11px;color:#fff;font-size:8px}.island-camera{width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#425364 0,#101419 72%);box-shadow:0 0 0 2px #1e2024}.island-activity{width:45px;height:4px;border-radius:5px;background:#2c2c2e}
+.home-screen{inset:0;padding:79px 20px 17px;background:radial-gradient(ellipse at 13% 17%,#fff8 0,transparent 34%),radial-gradient(ellipse at 90% 37%,#f4e7dfb3 0,transparent 33%),linear-gradient(151deg,#a6bac5 0%,#d9d4c5 47%,#d9bdac 100%);color:#242a30}
+.home-top{margin:0 0 13px;align-items:center}.home-date{font-family:Inter,system-ui,sans-serif;font-size:21px;font-weight:720;letter-spacing:-.04em}.home-caption{font-size:11px;color:#4c555d}.home-actions{display:flex;align-items:center;gap:5px}.home-lock,.home-action,.home-studio{border:1px solid #ffffff7d;border-radius:18px;padding:7px 9px;background:#ffffff57;color:#293036;font:inherit;font-size:9px;text-decoration:none;white-space:nowrap;cursor:pointer;backdrop-filter:blur(12px)}
+.home-widget{display:flex;justify-content:space-between;align-items:center;min-height:55px;margin:0 2px 14px;padding:10px 12px;border:1px solid #ffffff89;border-radius:17px;background:#ffffff58;backdrop-filter:blur(14px);box-shadow:0 5px 15px #47545c0c}.home-widget strong{display:block;font-size:11px}.home-widget span{display:block;margin-top:4px;font-size:9px;color:#657078}.home-widget-icon{font-size:20px;color:#81776d}
+.app-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 9px;padding:1px 0}.app-icon{position:relative;gap:5px;color:#1d2328;text-shadow:0 1px 5px #ffffff9c}.app-icon[draggable="true"]{cursor:grab}.app-icon.dragging{opacity:.42}.app-glyph{width:57px;height:57px;border-radius:16px;background:linear-gradient(145deg,#ffffff,#f3f3f4);color:white;display:grid;place-items:center;font-size:25px;box-shadow:0 4px 10px #20283226,inset 0 1px 1px #fff;overflow:hidden}.app-glyph svg{width:36px;height:36px;display:block}.app-label{font-size:9px;font-weight:550;text-shadow:0 1px 3px #fff;max-width:74px;overflow:hidden;text-overflow:ellipsis}.app-icon[data-app="kakao"] .app-glyph{background:#fee500}.app-icon[data-app="line"] .app-glyph{background:#06c755}.app-icon[data-app="sms"] .app-glyph{background:linear-gradient(#42dc70,#13b949)}.app-icon[data-app="phone"] .app-glyph{background:linear-gradient(#5ee37b,#21bd51)}.app-icon[data-app="gallery"] .app-glyph{background:#fff}.app-icon[data-app="notes"] .app-glyph{background:linear-gradient(#ffd941 0 22%,#fff 22%)}.app-icon[data-app="calendar"] .app-glyph{background:linear-gradient(#fbfbfb,#fff)}.app-icon[data-app="browser"] .app-glyph{background:linear-gradient(145deg,#56b7ff,#176bd5)}.app-icon[data-app="music"] .app-glyph{background:linear-gradient(145deg,#ff6b86,#a848bd)}.app-icon[data-app="social"] .app-glyph{background:linear-gradient(145deg,#ff8b45,#df3979 55%,#7654dc)}.app-icon[data-app="settings"] .app-glyph{background:linear-gradient(145deg,#bfc4c9,#747980)}.app-icon[data-app="vault"] .app-glyph{background:linear-gradient(145deg,#5f596f,#292734)}.app-icon[data-app="contacts"] .app-glyph{background:linear-gradient(145deg,#5fc3f8,#3c82d5)}.app-icon[data-app="camera"] .app-glyph{background:linear-gradient(145deg,#585b63,#17191e)}.app-icon[data-app="files"] .app-glyph{background:linear-gradient(145deg,#72caff,#3482d3)}.app-icon[data-app="mail"] .app-glyph{background:linear-gradient(145deg,#74c9ff,#2386dc)}
+.app-grid.editing .app-icon{animation:appWiggle .18s ease-in-out infinite alternate}.app-remove{position:absolute;left:1px;top:-4px;width:19px;height:19px;border:1px solid #fff;border-radius:50%;background:#fa4d58;color:white;font-size:14px;line-height:15px;box-shadow:0 1px 4px #2224}.app-move{position:absolute;right:0;top:-4px;border:0;border-radius:9px;background:#ffffffd9;color:#333;font-size:9px;padding:3px 5px}.home-search{width:100%;height:31px;margin:13px 0 10px;border:1px solid #ffffff8c;border-radius:18px;background:#ffffff5c;color:#353b40;text-align:center;font:inherit;font-size:10px;outline:none}.home-page-dots{height:10px;text-align:center;color:#ffffffcf;font-size:10px;letter-spacing:5px}.home-dock{justify-content:space-around;gap:8px;padding:8px 13px;border:1px solid #ffffff7d;border-radius:23px;background:#ffffff61;box-shadow:0 8px 24px #37404914;backdrop-filter:blur(20px)}.home-dock .app-icon{gap:0}.home-dock .app-glyph{width:49px;height:49px;border-radius:14px}.home-dock .app-label{display:none}
+.app-move-controls{position:absolute;right:-3px;top:-7px;display:flex;gap:2px;padding:2px 4px;border:1px solid #ffffffd9;border-radius:9px;background:#fffffff0;color:#31353a;font-size:10px;box-shadow:0 2px 6px #2223}.app-move-controls span{min-width:11px;cursor:pointer}.clue-strip{display:block;margin:8px 10px;padding:11px;border-radius:13px;background:#fff4c4;font-size:11px}.clue-strip button{border:0;background:none;color:#007aff;font:inherit;font-size:10px;cursor:pointer}
+.lock-screen{inset:0;padding:115px 28px 64px;background:radial-gradient(ellipse at 40% 28%,#fff3 0,transparent 48%),linear-gradient(155deg,#627f91,#aea9a0 54%,#8e6c64);color:white}.lock-time{font-family:Inter,system-ui,sans-serif;font-size:75px;font-weight:260;letter-spacing:-.06em;text-shadow:0 2px 12px #29353d3d}.lock-date{margin:7px 0 45px;color:#ffffffe0;font-size:14px}.lock-title{font-size:18px}.lock-copy{color:#ffffffdb}.lock-entry{color:white;background:#ffffff1d;border-color:#ffffff70;backdrop-filter:blur(10px)}.lock-action{background:#ffffffdf;color:#242a2d}.lock-error{color:#ffe2de}.lock-bottom{position:absolute;left:24px;right:24px;bottom:27px;display:flex;justify-content:space-between;align-items:center}.lock-bottom button{width:46px;height:46px;border:1px solid #ffffff65;border-radius:50%;background:#ffffff35;color:white;font-size:17px}.lock-swipe{position:absolute;bottom:8px;left:50%;width:120px;height:4px;transform:translateX(-50%);border-radius:4px;background:#ffffffd9}
+.chat-screen{background:#e9e9eb}.chat-header{background:#f8f8f8;border-bottom:1px solid #e3e3e5}.message-area{background:#e9e9eb}.appbar{background:#f8f8f8;height:55px;border-bottom:1px solid #e6e6e8}.app-title{font-size:19px;letter-spacing:-.02em}.search-box{background:#f4f4f4}.list-tabs{background:#fff}.chat-row{padding:11px 17px}.group-avatar{border-radius:50%;background:#efeff1}.composer{background:#f6f6f7}.app-screen{background:#f2f2f7}.app-screen-header{background:#f8f8fa}.phone-card{border:1px solid #ececf0;border-radius:16px;box-shadow:0 2px 7px #26263408}.phone-primary{background:#007aff;border-radius:10px}.gallery-tile{border-radius:8px}.phone-chat-editor,.phone-message-editor{display:none;padding:10px 12px;background:#fff9d9;border-bottom:1px solid #eee3ae}.phone-chat-editor.open,.phone-message-editor.open{display:block}.phone-chat-editor input,.phone-message-editor input,.phone-message-editor select,.phone-message-editor textarea{width:100%;margin:4px 0;padding:8px 9px;border:1px solid #deded8;border-radius:9px;font:inherit;font-size:11px}.phone-message-editor textarea{min-height:56px}.inline-editor{margin-top:16px;border:1px solid #dedfe4;border-radius:15px;background:#fff;padding:12px}.inline-editor summary{font-size:12px;font-weight:700;cursor:pointer}.inline-record{margin-top:9px;padding-top:9px;border-top:1px solid #eee}.inline-record input,.inline-record textarea,.inline-record select{display:block;width:100%;margin:6px 0;padding:8px;border:1px solid #dedfe4;border-radius:8px;font:inherit;font-size:11px}.inline-record textarea{min-height:50px}.inline-actions{display:flex;justify-content:space-between;gap:6px;margin-top:8px}.inline-actions button{border:1px solid #e0e1e5;border-radius:9px;background:#fff;padding:7px 10px;font:inherit;font-size:10px;cursor:pointer}.access-box{max-width:300px;margin:36px auto;padding:22px;border:1px solid #e6e6e9;border-radius:22px;background:#fff;text-align:center;box-shadow:0 15px 40px #20232b14}.access-box .access-symbol{font-size:28px}.access-box h3{font-size:17px;margin:8px 0}.access-box p{font-size:11px;line-height:1.6;color:#858a90}.access-box input{width:100%;margin:7px 0;padding:11px;border:1px solid #d9dbe0;border-radius:10px;text-align:center;font:inherit}.access-box button{margin:5px;border:0;border-radius:10px;padding:9px 13px;background:#007aff;color:#fff;font:inherit;font-size:11px;cursor:pointer}.clue-chip{display:block;margin:8px 0;padding:10px;border-radius:11px;background:#f5f5f7;font-size:11px;text-align:left}.clue-strip{margin-bottom:12px;padding:11px;border-radius:13px;background:#fff4c4;font-size:11px}.clue-strip button{float:right;border:0;background:none;color:#007aff;font:inherit;font-size:10px;cursor:pointer}
+.studio-mode .stage{display:block;max-width:980px;margin:auto;padding:28px 18px;background:#f4f2ed}.studio-mode .intro,.studio-mode .phone-wrap{display:none}.studio-mode .editor-panel{position:relative;top:auto;width:100%;max-height:none;margin:0;padding:24px}.studio-mode .message-editor-list{max-height:55vh}
+@keyframes appWiggle{from{transform:rotate(-1.2deg)}to{transform:rotate(1.2deg)}}
+@media(max-width:760px){.stage{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;padding:12px 0 20px;background:#101114}.intro{display:none}.phone-wrap{flex:none;width:min(calc(100vw - 28px),430px);min-height:0;margin:0 auto 12px;padding:9px;border-radius:49px;background:linear-gradient(135deg,#414247,#151619 35%,#414247 70%,#090a0b);box-shadow:0 22px 52px #0008,0 3px 12px #0008}.phone{width:100%;height:min(874px,max(680px,calc(100dvh - 64px)));min-height:0;border:1px solid #090a0b;border-radius:39px}.phone:before{display:block;border-radius:39px}.hardware-button{display:block}.home-screen{padding:76px 18px 16px}.app-grid{gap:13px 7px}.app-glyph{width:57px;height:57px}.editor-panel{position:static;width:calc(100% - 22px);max-height:none;margin:12px auto 18px}.studio-mode .stage{display:block;padding:0 12px 24px}.studio-mode .editor-panel{width:100%;margin:0;border-radius:0 0 18px 18px;padding:18px 14px}.studio-mode .editor-head{position:sticky;top:0;z-index:3;padding:10px 0;background:#fffdf9}}
+ .lock-screen{align-items:stretch;justify-content:flex-start;padding:119px 23px 72px;background-color:#243046;background-image:radial-gradient(ellipse at 52% 49%,#f4d7b9a8 0%,#d99b8c89 17%,transparent 43%),radial-gradient(ellipse at 18% 22%,#59768d 0%,transparent 36%),radial-gradient(ellipse at 83% 84%,#d58a6e99 0%,transparent 42%),linear-gradient(160deg,#1c263d 2%,#526275 43%,#b47e7b 68%,#524051 100%);overflow:hidden;text-align:center}
+ .lock-screen:before{content:"";position:absolute;z-index:0;inset:0;background:radial-gradient(ellipse at 44% 72%,#f5d6b25c 0%,transparent 39%),radial-gradient(ellipse at 4% 58%,#161b32a6 0%,transparent 48%),linear-gradient(180deg,#0d132327 0%,transparent 38%,#1713263d 100%);pointer-events:none}
+ .lock-screen:after{content:"";position:absolute;z-index:0;inset:0;box-shadow:inset 0 0 100px #10111b55;pointer-events:none}
+ .lock-screen> :not(.lock-bottom):not(.lock-swipe):not(.lock-open-prompt):not(.lock-access){position:relative;z-index:1}
+ .phone.locked .status{color:#fff;text-shadow:0 1px 5px #10131a8c}
+ .lock-date{margin:0;color:#ffffffed;font-size:14px;font-weight:580;letter-spacing:.01em;text-shadow:0 1px 8px #15202d65}
+ .lock-time{margin-top:4px;font-size:86px;font-weight:260;line-height:1.05;letter-spacing:-.075em;text-shadow:0 2px 18px #1a1c2a59;font-variant-numeric:tabular-nums}
+ .lock-owner{margin-top:2px;color:#ffffffd9;font-size:11px;font-weight:550;letter-spacing:.08em;text-shadow:0 1px 8px #15202d65}
+ .lock-notifications{display:grid;gap:9px;width:100%;margin:41px auto 0;text-align:left}
+ .lock-notification{padding:11px 13px 12px;border:1px solid #ffffff53;border-radius:17px;background:#f8f8f8c7;color:#20242a;backdrop-filter:blur(23px) saturate(1.45);-webkit-backdrop-filter:blur(23px) saturate(1.45);box-shadow:0 7px 24px #1a1b2650}
+ .lock-notification-head{display:flex;align-items:center;gap:7px;color:#4e545a;font-size:9px;font-weight:650;letter-spacing:.02em}
+ .lock-notification-app-icon{display:grid;width:18px;height:18px;place-items:center;overflow:hidden;border-radius:6px;background:#fff;box-shadow:0 1px 3px #0002}
+ .lock-notification-app-icon svg{width:15px;height:15px}
+ .lock-notification-time{margin-left:auto;color:#73787c;font-weight:450}
+ .lock-notification-title{margin-top:5px;font-size:12px;font-weight:720}
+ .lock-notification-body{display:-webkit-box;margin-top:3px;overflow:hidden;color:#3d4248;font-size:11px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+ .lock-access{display:none}
+ .lock-screen.passcode-open .lock-access{position:absolute;z-index:2;left:22px;right:22px;bottom:96px;display:block;padding:16px;border:1px solid #ffffff65;border-radius:20px;background:#f6f6f5df;color:#25282d;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 14px 38px #10111b52}
+ .lock-access .lock-title{font-size:15px}
+ .lock-access .lock-copy{max-width:none;margin:5px auto 12px;color:#6a6d73;font-size:11px}
+ .lock-access .lock-entry{width:100%;padding:10px;border-color:#d5d5d8;background:#ffffffd9;color:#27292d;letter-spacing:.3em}
+ .lock-access .lock-action{width:100%;margin-top:9px;background:#1677e8;color:white}
+ .lock-access .lock-error{color:#c43e48}
+ .lock-bottom{z-index:2}
+ .lock-bottom button{display:grid;place-items:center;border-color:#ffffff69;background:#ffffff36;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 3px 12px #1114}
+ .lock-open-prompt{position:absolute;z-index:2;left:50%;bottom:61px;transform:translateX(-50%);padding:7px 13px;border:0;border-radius:18px;background:#ffffff00;color:#ffffffed;font:inherit;font-size:11px;text-shadow:0 1px 6px #171822a6;cursor:pointer}
+ .lock-screen.passcode-open .lock-open-prompt{display:none}
+ .lock-swipe{z-index:2}
+ .lock-notifications:empty{display:none}
+ @media(max-width:760px){.lock-screen{padding:112px 19px 72px}.lock-time{font-size:80px}.lock-notifications{margin-top:37px}.lock-screen.passcode-open .lock-access{left:17px;right:17px}}
+ </style>
+</head>
+<body>
+<main class="stage">
+  <aside class="intro">
+    <div class="eyebrow">SAKURYO · phone preview</div>
+    <h1>捡到的手机</h1>
+    <p>这是一部可以点开的手机：聊天、短信、电话、相册、备忘录、日历、浏览记录、音乐与社交应用都在桌面上。</p>
+    <div class="source-note"><strong>稿件来源</strong><br>按你上传的修改稿逐条呈现，成员发言未改写，也没有补写新台词。文档没有提供确切日期与时间；这里先放入 <strong>15:16–15:46</strong> 的可修改时间占位。</div>
+    <div class="preview-footer">群聊成员和发言顺序按原稿保留。点击群名可查看成员；使用手机内的返回键回到聊天列表。</div>
+  </aside>
+  <div class="phone-wrap">
+    <section class="phone" aria-label="iPhone 手机预览">
+      <div class="dynamic-island"><span class="island-camera"></span><span class="island-activity"></span></div>
+      <div class="status"><span id="statusTime">15:46</span><span class="status-icons"><span class="signal"><i></i><i></i><i></i><i></i></span><span>5G</span><span class="battery"></span></span></div>
+      <section class="home-screen" id="homeScreen" aria-label="手机桌面">
+        <div class="home-top"><div><div class="home-date" id="homeGreeting">咲哉的手机</div><div class="home-caption" id="homeCaption">故事之外的私人空间</div></div><div class="home-actions"><button class="home-action" id="homeEditToggle">编辑主屏</button><a class="home-studio" id="openStudioLink" href="?studio=1" target="_blank">制作后台</a><button class="home-lock" id="lockButton">锁定手机</button></div></div>
+        <div class="home-widget"><div><strong id="homeWidgetTitle">日历</strong><span id="homeWidgetText">没有日历事项</span></div><span class="home-widget-icon">▦</span></div>
+        <div class="app-grid" id="appGrid"></div><div class="home-page-dots">● ○</div><input class="home-search" id="homeSearch" placeholder="搜索应用" aria-label="搜索应用"><div class="home-dock" id="homeDock"></div>
+      </section>
+      <section class="lock-screen" id="lockScreen" aria-label="iPhone 锁屏">
+        <div class="lock-date" id="lockDate">日期待定</div>
+        <div class="lock-time">15:46</div>
+        <div class="lock-owner">咲哉的 iPhone</div>
+        <div class="lock-notifications" id="lockNotifications" aria-live="polite"></div>
+        <div class="lock-access" id="lockAccess">
+          <div class="lock-title" id="lockTitle">咲哉的手机</div>
+          <div class="lock-copy" id="lockCopy">请输入手机密码。</div>
+          <input class="lock-entry" id="pinEntry" type="password" inputmode="numeric" maxlength="12" autocomplete="off" aria-label="手机密码">
+          <button class="lock-action" id="unlockButton">解锁</button>
+          <div class="lock-error" id="lockError"></div>
+        </div>
+        <div class="lock-bottom"><button aria-label="手电筒">◉</button><button aria-label="相机" id="lockCameraButton">▣</button></div>
+        <button class="lock-open-prompt" id="lockSwipeButton">轻点进入手机</button>
+        <span class="lock-swipe"></span>
+      </section>
+      <div class="appbar" id="listBar">
+        <div class="app-title" id="appTitle">KakaoTalk</div>
+          <div class="app-actions">
+          <button class="icon-button" id="homeButton" aria-label="返回手机桌面">⌂</button>
+          <button class="icon-button" id="searchToggle" aria-label="搜索">⌕</button>
+          <button class="icon-button" id="chatInlineEditToggle" aria-label="手机内编辑">✎</button>
+          <button class="icon-button" aria-label="更多">⋮</button>
+        </div>
+      </div>
+      <div class="search-box" id="searchBox"><input id="searchInput" placeholder="搜索聊天"></div>
+      <div class="screen" id="listScreen">
+        <div class="list-tabs"><button>朋友</button><button class="active">聊天</button><button>开放聊天</button></div>
+        <div class="phone-chat-editor" id="phoneChatEditor"></div>
+        <div class="chat-list">
+          <div class="list-label">聊天</div>
+          <div id="roomList"><div id="openChat" class="legacy-open-chat" aria-hidden="true"></div></div>
+          <div class="list-footer">点开群聊，查看完整记录</div>
+        </div>
+        <div class="bottom-nav"><div class="nav-item"><span class="nav-symbol">♙</span><span>朋友</span></div><div class="nav-item selected"><span class="nav-symbol">▤</span><span>聊天</span></div><div class="nav-item"><span class="nav-symbol">◉</span><span>动态</span></div><div class="nav-item"><span class="nav-symbol">•••</span><span>更多</span></div></div>
+      </div>
+      <div class="chat-screen" id="chatScreen">
+        <header class="chat-header">
+          <button class="back-button" id="backButton" aria-label="返回聊天列表">‹</button>
+          <div class="chat-heading"><div class="chat-name" id="activeRoomName">救救我</div><div class="chat-members" id="activeRoomInfo">6 位成员 · KakaoTalk</div></div>
+          <button class="header-menu" id="memberButton" aria-label="查看群成员">☰</button><button class="header-menu" id="chatEditButton" aria-label="手机内编辑消息">✎</button><button class="header-menu" id="chatHomeButton" aria-label="返回手机桌面">⌂</button>
+        </header>
+        <div class="phone-message-editor" id="phoneMessageEditor"></div>
+        <div class="member-sheet" id="memberSheet"><div class="member-sheet-title" id="memberSheetTitle">成员（6）</div><div class="member-list" id="memberList"></div></div>
+        <div class="message-area" id="messageArea">
+          <div class="date-pill" id="datePill">日期待定 · 时间为可修改占位</div>
+          <div id="messageList"></div>
+        </div>
+        <button class="jump-latest" id="jumpLatest">跳到最新消息 ↓</button>
+        <div class="composer"><button class="plus-button" aria-label="添加">＋</button><div class="fake-input">消息</div><span class="smile">☺</span></div>
+      </div>
+      <section class="app-screen" id="appScreen"><header class="app-screen-header"><button id="appBackButton" aria-label="返回桌面">‹</button><div class="app-screen-title" id="appScreenTitle"></div><span id="appScreenAction"></span></header><div class="app-screen-content" id="appScreenContent"></div></section><input id="phoneGalleryUpload" class="avatar-file" type="file" accept="image/*" multiple>
+    </section>
+  </div>
+  <aside class="editor-panel" id="editorPanel" aria-label="手机内容编辑器">
+    <div class="editor-head"><div><div class="editor-eyebrow">SAKURYO PHONE</div><h2>可视化制作后台</h2><p>改动会即时出现在手机预览中，并自动保存在当前浏览器。</p><a class="editor-button" id="studioLink" href="?phone=1">打开手机预览</a></div><span class="save-status" id="saveStatus">本机自动保存</span></div>
+    <div class="backup-row"><button class="editor-button primary" id="exportButton">导出备份</button><button class="editor-button" id="publishButton">导出发布页</button><label for="importFile">导入备份</label><input id="importFile" type="file" accept="application/json,.json"></div>
+    <div class="editor-tabs" role="tablist"><button class="active" data-editor-tab="room" role="tab" aria-selected="true">聊天室与消息</button><button data-editor-tab="profile" role="tab" aria-selected="false">角色档案</button><button data-editor-tab="phone" role="tab" aria-selected="false">其他手机内容</button></div>
+    <section class="editor-view active" id="roomEditorView" role="tabpanel">
+      <div class="room-select-row"><div class="editor-field"><label class="editor-label" for="roomSelect">当前聊天室</label><select id="roomSelect"></select></div><button class="editor-button" id="addRoomButton">＋ 新建</button></div>
+      <div class="editor-row"><div class="editor-field"><label class="editor-label" for="roomTitleInput">聊天室名称</label><input id="roomTitleInput" data-room-field="title"></div><div class="editor-field"><label class="editor-label" for="roomAppInput">聊天软件</label><select id="roomAppInput" data-room-field="app"><option>KakaoTalk</option><option>LINE</option><option>短信</option></select></div></div>
+      <div class="editor-field"><label class="editor-label" for="roomDateInput">日期说明</label><input id="roomDateInput" data-room-field="dateLabel" placeholder="例如：2026年秋 · 15:16–15:46"></div>
+      <div class="editor-field"><span class="editor-label">聊天室成员</span><div class="member-picker" id="memberPicker"></div></div>
+      <div class="section-heading"><strong>聊天记录</strong><span id="messageCount">0 条</span></div>
+      <input class="message-search" id="messageSearch" placeholder="搜索发言者或消息内容" aria-label="搜索聊天记录">
+      <div class="message-editor-list" id="messageEditorList"></div>
+      <div class="backup-row"><button class="editor-button primary" id="addMessageButton">＋ 添加消息</button><button class="editor-button danger" id="deleteRoomButton">删除聊天室</button></div>
+    </section>
+    <section class="editor-view" id="profileEditorView" role="tabpanel">
+      <div class="room-select-row"><div class="editor-field"><label class="editor-label" for="profileSelect">角色</label><select id="profileSelect"></select></div><button class="editor-button" id="addProfileButton">＋ 新增角色</button></div>
+      <div class="profile-preview-row"><div class="profile-preview-avatar" id="profilePreviewAvatar"></div><div class="profile-preview-copy"><strong id="profilePreviewName"></strong><span id="profilePreviewMeta"></span></div></div>
+      <div class="editor-field"><label class="editor-label" for="profileNameInput">显示名称</label><input id="profileNameInput" data-profile-field="displayName"></div>
+      <div class="editor-field"><label class="editor-label" for="profileNicknameInput">昵称 / 备注</label><input id="profileNicknameInput" data-profile-field="nickname" placeholder="可留空"></div>
+      <div class="editor-field"><label class="editor-label" for="profileStatusInput">状态 / 个性签名</label><input id="profileStatusInput" data-profile-field="status" placeholder="可留空"></div>
+      <div class="editor-field"><label class="editor-label" for="profileAvatarInput">头像图片网址</label><input id="profileAvatarInput" data-profile-field="avatar" placeholder="https://…"></div>
+      <div class="avatar-actions"><label class="editor-button" for="avatarUpload">上传头像</label><input class="avatar-file" id="avatarUpload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><button class="editor-button" id="clearAvatarButton">移除头像</button></div>
+      <p class="editor-help">上传的头像会缩小后保存在当前浏览器；网址头像需要联网访问。导出备份可带走角色图片和所有聊天内容。</p>
+      <div class="backup-row"><button class="editor-button danger" id="deleteProfileButton">删除角色</button></div>
+    </section>
+    <section class="editor-view" id="phoneEditorView" role="tabpanel">
+      <p class="editor-help">聊天文字仍由你亲自填写。相册、通话、便签、日历、浏览记录、音乐和动态可在这里逐项编辑；空白内容不会自动编造。</p>
+      <div class="editor-field"><label class="editor-label" for="dataSetSelect">要编辑的手机应用</label><select id="dataSetSelect"><option value="gallery">相册</option><option value="calls">通话记录</option><option value="notes">备忘录</option><option value="calendar">日历</option><option value="browser">Safari 浏览历史</option><option value="music">音乐</option><option value="social">社交动态</option><option value="mail">邮件</option></select></div>
+      <div class="editor-field"><span class="editor-label">内容项目</span><div class="data-record-list" id="dataRecordList"></div></div>
+      <div class="backup-row"><button class="editor-button primary" id="addDataRecordButton">＋ 添加项目</button><button class="editor-button danger" id="deleteDataRecordButton">删除项目</button><label class="editor-button" id="galleryUploadLabel" for="galleryUpload">上传照片</label><input id="galleryUpload" class="avatar-file" type="file" accept="image/*" multiple></div>
+      <div class="data-editor-fields" id="dataEditorFields"></div>
+      <div class="section-heading"><strong>锁屏与显示</strong></div>
+      <div class="editor-field"><label class="editor-label" for="devicePinInput">手机密码（留空表示不设密码）</label><input id="devicePinInput" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="由你设定，不预设故事密码"></div>
+      <div class="editor-field"><label class="editor-label" for="vaultPinInput">私密内容密码（可选）</label><input id="vaultPinInput" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="用于标记为私密的便签与照片"></div>
+      <div class="editor-field"><label class="editor-label" for="languageInput">手机界面语言</label><select id="languageInput"><option value="zh-CN">简体中文</option><option value="ko">한국어</option><option value="ja">日本語</option></select></div>
+      <p class="editor-help">密码由你决定，不会替你猜设。此密码只是原型里的界面锁，不是加密保护；密码和内容会保存在备份及发布页中，请勿放入真实敏感信息。</p>
+      <div class="section-heading"><strong>应用与内容访问</strong><span>公开 / 密码 / 线索</span></div>
+      <div class="editor-field"><label class="editor-label" for="accessAppSelect">应用</label><select id="accessAppSelect"></select></div>
+      <div class="editor-field"><label class="editor-label" for="accessModeSelect">解锁方式</label><select id="accessModeSelect"><option value="public">公开</option><option value="password">密码</option><option value="clue">线索关联</option></select></div>
+      <div class="editor-field"><label class="editor-label" for="accessPasswordInput">应用密码（自己设定）</label><input id="accessPasswordInput" type="password" autocomplete="new-password" placeholder="留空时该应用保持锁定"></div>
+      <div class="editor-field"><label class="editor-label" for="accessClueSelect">需要发现的线索</label><select id="accessClueSelect" multiple size="4"></select></div>
+      <p class="editor-help">线索规则没有默认剧情答案；线索未配置时，手机会提示作者补充，不会臆造密码。</p>
+      <div class="section-heading"><strong>线索与关联</strong><span id="clueCount">0 条</span></div>
+      <div class="room-select-row"><div class="editor-field"><label class="editor-label" for="clueSelect">当前线索</label><select id="clueSelect"></select></div><button class="editor-button" id="addClueButton">＋ 新建线索</button></div>
+      <div class="editor-field"><label class="editor-label" for="clueTitleInput">线索名称</label><input id="clueTitleInput" placeholder="待作者填写"></div>
+      <div class="editor-field"><label class="editor-label" for="clueTextInput">手机上可见的线索内容</label><textarea id="clueTextInput" placeholder="不预设原作线索"></textarea></div>
+      <div class="editor-field"><label class="editor-label" for="clueAnswerInput">解锁答案（可留空，留空表示发现线索即可）</label><input id="clueAnswerInput" placeholder="由作者决定"></div>
+      <div class="editor-row"><div class="editor-field"><label class="editor-label" for="clueSourceSelect">线索放在哪个 App</label><select id="clueSourceSelect"></select></div><div class="editor-field"><label class="editor-label" for="clueSourceRecordInput">来源内容 ID（可留空）</label><input id="clueSourceRecordInput" placeholder="可选"></div></div>
+      <div class="editor-field"><label class="editor-label" for="clueTargetSelect">发现后解锁哪些 App</label><select id="clueTargetSelect" multiple size="4"></select></div>
+      <div class="backup-row"><button class="editor-button danger" id="deleteClueButton">删除线索</button><button class="editor-button danger" id="resetProgressButton">重置解锁进度</button></div>
+    </section>
+  </aside>
+</main>
+<script>
+const messages = [{"speaker":"Sion","text":"？","type":"message"},{"type":"event","text":"sakuya把群名修改为救救我"},{"speaker":"Riku","text":"这是什么群","type":"message"},{"speaker":"Jaehee","text":"怎么了？","type":"message"},{"speaker":"Sion","text":"@sakuya 发生什么了？","type":"message"},{"speaker":"Sakuya","text":"我也想知道","type":"message"},{"speaker":"Riku","text":"什么意思","type":"message"},{"speaker":"Sakuya","text":"辽最近根本不和我说话","type":"message"},{"speaker":"Sion","text":"原来你自己有发现啊","type":"message"},{"speaker":"Riku","text":"怪不得没拉辽","type":"message"},{"speaker":"Sion","text":"所以你们真的在冷战？","type":"message"},{"speaker":"Sion","text":"我们队伍终于还是迎来这一天了？","type":"message"},{"speaker":"Sakuya","text":"真的","type":"message"},{"speaker":"Jaehee","text":"Sakuya是不是做了什么让他不开心了？","type":"message"},{"speaker":"Yushi","text":"可疑","type":"message"},{"speaker":"Sakuya","text":"真的做了的话","type":"message"},{"speaker":"Sakuya","text":"他应该会直接和我说的吧","type":"message"},{"speaker":"Sion","text":"也是","type":"message"},{"speaker":"Sakuya","text":"那天晚上他说自己可能生病了","type":"message"},{"speaker":"Sakuya","text":"然后就开始出问题了","type":"message"},{"speaker":"Yushi","text":"出问题？","type":"message"},{"speaker":"Sakuya","text":"那种","type":"message"},{"speaker":"Sakuya","text":"不理我之类的","type":"message"},{"speaker":"Jaehee","text":"有什么症状吗？","type":"message"},{"speaker":"Sakuya","text":"看不太出","type":"message"},{"speaker":"Yushi","text":"还好吧","type":"message"},{"speaker":"Riku","text":"不过最近好像是有点，以前拍外景的时候没事就跑到咲哉旁边的","type":"message"},{"speaker":"Sakuya","text":"现在会先看一下我然后绕开啊","type":"message"},{"speaker":"Sakuya","text":"到底为什么","type":"message"},{"speaker":"Jaehee","text":"应该也没有每次都绕开吧？","type":"message"},{"speaker":"Sion","text":"有谁算过比例吗？","type":"message"},{"speaker":"Sakuya","text":"（哭的表情包）","type":"message"},{"speaker":"Riku","text":"都不粘着了","type":"message"},{"speaker":"Yushi","text":"只不粘他了吧","type":"message"},{"speaker":"Sakuya","text":"果然不是我的错觉吧？？？","type":"message"},{"speaker":"Sakuya","text":"我问他他也支支吾吾的","type":"message"},{"speaker":"Sakuya","text":"好不爽","type":"message"},{"speaker":"Sakuya","text":"旧日情深抵不过今日无情","type":"message"},{"speaker":"Sakuya","text":"我原本以为我们会一直走下去，原来一切都是我自作多情","type":"message"},{"speaker":"Sakuya","text":"元に戻るほうが前に進むより難しい","type":"message"},{"speaker":"Riku","text":"你到底还要不要解决","type":"message"},{"speaker":"Sakuya","text":"可是","type":"message"},{"speaker":"Sakuya","text":"他好难懂","type":"message"},{"speaker":"Jaehee","text":"唉，之前问的时候说没事来着","type":"message"},{"speaker":"Sakuya","text":"那他也可能真的没事","type":"message"},{"speaker":"Sion","text":"每次都替辽把话说掉要怎么办啊咲哉","type":"message"},{"speaker":"Sakuya","text":"那我应该怎么说","type":"message"},{"speaker":"Sakuya","text":"我都不知道该怎么应对他了","type":"message"},{"speaker":"Yushi","text":"这不是不用应对吗","type":"message"},{"speaker":"Riku","text":"牙白","type":"message"},{"speaker":"Jaehee","text":"哇，哥……","type":"message"},{"speaker":"Sion","text":"你们等下，我要截图","type":"message"},{"speaker":"Yushi","text":"开玩笑的！","type":"message"},{"speaker":"Sakuya","text":"别、、","type":"message"},{"speaker":"Yushi","text":"这句截进去了吗","type":"message","reply":"开玩笑的！"},{"speaker":"Sion","text":"晚了。","type":"message"},{"speaker":"Sion","text":"嗯嗯","type":"message","reply":"这句截进去了吗"},{"speaker":"Yushi","text":"噘嘴颜文字","type":"message"},{"speaker":"Riku","text":"是男子汉就直接问啊","type":"message"},{"speaker":"Sakuya","text":"我不敢","type":"message"},{"speaker":"Jaehee","text":"压力也很大吧","type":"message"},{"speaker":"Sakuya","text":"辽不想说的话我一直追问也没用吧……","type":"message"},{"speaker":"Sion","text":"你把他买的零食吃了？","type":"message"},{"speaker":"Sakuya","text":"没有啊","type":"message"},{"speaker":"Sakuya","text":"他吃我的还差不多","type":"message"},{"speaker":"Yushi","text":"你说了冷漠的话伤他心了？","type":"message"},{"speaker":"Sakuya","text":"他不是就喜欢冷漠的吗……","type":"message"},{"speaker":"Jaehee","text":"是吗？","type":"message"},{"speaker":"Sion","text":"那也要适度才行啊","type":"message"},{"speaker":"Riku","text":"你踩到他了吗","type":"message"},{"speaker":"Sakuya","text":"又不是猫尾巴","type":"message"},{"speaker":"Sakuya","text":"哥 拜托 认真点","type":"message"},{"speaker":"Riku","text":"哦哦","type":"message"},{"speaker":"Sakuya","text":"我觉得现在最大的可能性是","type":"message"},{"speaker":"Sion","text":"你锻炼之后他觉得寂寞了","type":"message"},{"speaker":"Sakuya","text":"他和我玩腻了","type":"message"},{"type":"recall","speaker":"Yushi","text":"已撤回一条信息"},{"speaker":"Riku","text":"真棒，一下子就有三条线索了","type":"message"},{"speaker":"Sakuya","text":"脸颊肉不是我能控制的啊","type":"message","reply":"已撤回信息"},{"speaker":"Jaehee","text":"腻了也不至于这样啦","type":"message"},{"speaker":"Riku","text":"再多吃点零食养回来这样","type":"message"},{"speaker":"Sion","text":"等下回宿舍给你们订多点外卖","type":"message"},{"speaker":"Riku","text":"你先反省一个人锻炼的事和脸颊肉吧","type":"message"},{"speaker":"Sakuya","text":"真的吗……","type":"message"},{"speaker":"Riku","text":"嗯","type":"message"},{"speaker":"Riku","text":"至少脸颊肉反省一下","type":"message"},{"speaker":"Yushi","text":"公报私仇吧","type":"message"},{"speaker":"Riku","text":"胡说","type":"message"},{"speaker":"Jaehee","text":"咲哉最近一直在一个人想这些事吗","type":"message"},{"speaker":"Jaehee","text":"会不会太辛苦了","type":"message"},{"speaker":"Sakuya","text":"谢谢您的顾虑","type":"message"},{"speaker":"Jaehee","text":"内，您多礼了","type":"message"},{"speaker":"Yushi","text":"不谢谢我们吗","type":"message"},{"speaker":"Sion","text":"原本就很累","type":"message"},{"speaker":"Sion","text":"倒也是真的","type":"message"},{"speaker":"Riku","text":"辽可能也是太累了  所以没有空去调整心情","type":"message"},{"speaker":"Riku","text":"其实不一定是多大事","type":"message"},{"speaker":"Riku","text":"@Yushi 再嘟哝辽都能听见了","type":"message"},{"speaker":"Yushi","text":"啊","type":"message"},{"speaker":"Jaehee","text":"是呢","type":"message"},{"speaker":"Jaehee","text":"行程、拍摄、练习，连吃饭时间都不固定","type":"message"},{"speaker":"Riku","text":"嘛","type":"message"},{"speaker":"Riku","text":"这两年大家确实做得很好","type":"message"},{"speaker":"Jaehee","text":"都比刚开始的时候要更可靠了","type":"message"},{"speaker":"Jaehee","text":"在我看来","type":"message"},{"speaker":"Sakuya","text":"不然时间白流了嘛","type":"message"},{"speaker":"Sion","text":"Wish没有任何一个人都是不行的啊","type":"message"},{"speaker":"Sakuya","text":"为什么突然","type":"message"},{"speaker":"Sion","text":"一下子觉得很感慨","type":"message"},{"speaker":"Sion","text":"咲哉不觉得吗？嗯？","type":"message"},{"speaker":"Yushi","text":"大家都很努力","type":"message"},{"speaker":"Sion","text":"Yushi乖宝宝","type":"message"},{"speaker":"Sakuya","text":"确实都很努力就是了","type":"message"},{"speaker":"Riku","text":"就是说啊","type":"message"},{"speaker":"Sion","text":"回归期这样下去不行","type":"message"},{"speaker":"Jaehee","text":"西珍妮们应该也会感受到","type":"message"},{"speaker":"Riku","text":"啊，对哦","type":"message"},{"speaker":"Riku","text":"她们什么都知道","type":"message"},{"speaker":"Sion","text":"OK","type":"message"},{"speaker":"Sion","text":"等下回去之后我得和辽好好聊聊","type":"message"},{"speaker":"Jaehhe","text":"内","type":"message"},{"speaker":"Riku","text":"别吓到他","type":"message"},{"speaker":"Sion","text":"我会委婉点","type":"message"},{"speaker":"Sakuya","text":"如果真的是有什么原因的话","type":"message"},{"speaker":"Sakuya","text":"一定要让他亲口和我说","type":"message"},{"speaker":"Yushi","text":"辽一直在看我","type":"message"},{"speaker":"Sion","text":"好","type":"message"},{"speaker":"Jaehee","text":"哥，千万别被看到屏幕了","type":"message"},{"speaker":"Yushi","text":"努力中","type":"message"},{"speaker":"Sakuya","text":"还有","type":"message"},{"speaker":"Sakuya","text":"最好在他和我说之前先偷偷告诉我","type":"message"},{"speaker":"Riku","text":"？","type":"message"},{"speaker":"Sakuya","text":"我要做一下准备","type":"message"},{"speaker":"Sion","text":"做人要真诚才行","type":"message"},{"speaker":"Sion","text":"明白吗","type":"message"},{"speaker":"Sakuya","text":"很真诚啊……","type":"message"},{"speaker":"Riku","text":"好下作的手段","type":"message"},{"speaker":"Sakuya","text":"不至于吧？？","type":"message"},{"speaker":"Jaehee","text":"总之大家都会帮咲哉的","type":"message"},{"speaker":"Yushi","text":"嗯","type":"message"},{"speaker":"Sakuya","text":"那我们队的以后就先靠Sion哥了……","type":"message"},{"speaker":"Sion","text":"等下出机场的时候你还是注意点","type":"message"},{"speaker":"Sion","text":"别太哭丧脸啊","type":"message"},{"speaker":"Manager","text":"我知道了。","type":"message"},{"speaker":"Sakuya","text":"哥你醒了","type":"message"},{"speaker":"Manager","text":"我等下会找辽聊聊","type":"message"},{"speaker":"Manager","text":"Sion先别出面","type":"message"},{"speaker":"Manager","text":"需要劝什么的话我会再找你们","type":"message"},{"speaker":"Sion","text":"拜托了哥","type":"message"},{"speaker":"Riku","text":"拜托了哥。","type":"message"},{"speaker":"Jaehee","text":"拜托了哥😭","type":"message"},{"speaker":"Yushi","text":"拜托了哥","type":"message"},{"speaker":"Sakuya","text":"拜托了哥（流泪的大嘴吉表情包）","type":"message"},{"speaker":"Manager","text":"Sion说得没错","type":"message"},{"speaker":"Manager","text":"等下出机场还是记得有点精神啊","type":"message"},{"speaker":"Sakuya","text":"好","type":"message"},{"speaker":"Sion","text":"好","type":"message"},{"speaker":"Riku","text":"OK","type":"message"},{"speaker":"Jahee","text":"内","type":"message"},{"speaker":"Yushi","text":"好","type":"message"}];
+const names = {Sion:"S",Sakuya:"咲",Riku:"R",Jaehee:"J",Jaehhe:"J",Jahee:"J",Yushi:"Y",Manager:"经"};
+const escapeHtml = function(value){return String(value).replace(/[&<>"']/g,function(char){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]})};
+const startMinute = 15*60+16;
+messages.forEach(function(message,index){
+  const offset = Math.round(index*30/Math.max(1,messages.length-1));
+  const total = startMinute+offset;
+  message.time = String(Math.floor(total/60)).padStart(2,"0")+":"+String(total%60).padStart(2,"0");
+});
+const messageArea = document.getElementById("messageArea");
+const messageList = document.getElementById("messageList");
+function renderMessages(){
+  messageList.innerHTML = messages.map(function(message,index){
+    if(message.type==="event"){
+      return '<div class="system-event"><span>'+escapeHtml(message.text)+'</span><span class="system-time">'+message.time+'</span></div>';
+    }
+    if(message.type==="recall"){
+      return '<div class="system-event"><span>'+escapeHtml(message.speaker+" "+message.text)+'</span><span class="system-time">'+message.time+'</span></div>';
+    }
+    const self = message.speaker==="Sakuya";
+    const previous = messages[index-1];
+    const next = messages[index+1];
+    const continued = previous && previous.type==="message" && previous.speaker===message.speaker;
+    const lastInRun = !next || next.type!=="message" || next.speaker!==message.speaker;
+    const avatar = '<div class="avatar avatar-'+escapeHtml(message.speaker)+'">'+escapeHtml(names[message.speaker]||message.speaker.slice(0,1))+'</div>';
+    const sender = !self && !continued ? '<div class="sender">'+escapeHtml(message.speaker)+'</div>' : '';
+    const reply = message.reply ? '<div class="reply-quote">回复：'+escapeHtml(message.reply)+'</div>' : '';
+    let body = escapeHtml(message.text);
+    body = body.replace("（流泪的大嘴吉表情包）",'<span class="sticker-placeholder">（流泪的大嘴吉表情包）</span>');
+    const bubble = '<div class="bubble">'+reply+body+'</div>';
+    const time = lastInRun ? '<span class="message-time">'+message.time+'</span>' : '';
+    return '<div class="message-row '+(self?"self ":"")+(continued?"continued":"")+'">'+(self?'':'<div class="avatar avatar-'+escapeHtml(message.speaker)+'">'+escapeHtml(names[message.speaker]||message.speaker.slice(0,1))+'</div>')+'<div class="message-column">'+sender+'<div class="message-inner">'+bubble+time+'</div></div></div>';
+  }).join("");
+}
+renderMessages();
+const listScreen = document.getElementById("listScreen");
+const listBar = document.getElementById("listBar");
+const chatScreen = document.getElementById("chatScreen");
+const searchBox = document.getElementById("searchBox");
+function openChat(){listScreen.style.display="none";listBar.style.display="none";searchBox.classList.remove("open");chatScreen.classList.add("open");messageArea.scrollTop=0}
+function closeChat(){chatScreen.classList.remove("open");listScreen.style.display="flex";listBar.style.display="flex";document.getElementById("memberSheet").classList.remove("open")}
+document.getElementById("openChat").addEventListener("click",openChat);
+document.getElementById("openChat").addEventListener("keydown",function(event){if(event.key==="Enter"||event.key===" "){event.preventDefault();openChat()}});
+document.getElementById("backButton").addEventListener("click",closeChat);
+document.getElementById("memberButton").addEventListener("click",function(){document.getElementById("memberSheet").classList.toggle("open")});
+document.getElementById("searchToggle").addEventListener("click",function(){searchBox.classList.toggle("open");if(searchBox.classList.contains("open"))document.getElementById("searchInput").focus()});
+document.getElementById("searchInput").addEventListener("input",function(event){document.getElementById("openChat").style.display="救救我".includes(event.target.value)?"flex":"none"});
+const jumpLatest = document.getElementById("jumpLatest");
+messageArea.addEventListener("scroll",function(){const remaining=messageArea.scrollHeight-messageArea.scrollTop-messageArea.clientHeight;jumpLatest.classList.toggle("visible",remaining>180)});
+jumpLatest.addEventListener("click",function(){messageArea.scrollTo({top:messageArea.scrollHeight,behavior:"smooth"})});
+</script>
+<script>
+(function(){
+  var embeddedState = null;
+  var storageKey = "sakuryo-phone-editor-v1";
+  var defaultProfiles = [
+    {id:"Sion",displayName:"Sion",nickname:"",status:"",avatar:""},
+    {id:"Sakuya",displayName:"Sakuya",nickname:"咲哉",status:"",avatar:""},
+    {id:"Riku",displayName:"Riku",nickname:"",status:"",avatar:""},
+    {id:"Jaehee",displayName:"Jaehee",nickname:"",status:"",avatar:""},
+    {id:"Yushi",displayName:"Yushi",nickname:"",status:"",avatar:""},
+    {id:"Manager",displayName:"Manager",nickname:"经纪人哥",status:"",avatar:""},
+    {id:"FamilyMom",displayName:"妈妈",nickname:"妈妈",status:"",avatar:""},
+    {id:"FamilyDad",displayName:"爸爸",nickname:"爸爸",status:"",avatar:""},
+    {id:"Sister",displayName:"姐姐",nickname:"姐姐",status:"",avatar:""},
+    {id:"OldFriend",displayName:"旧友",nickname:"旧友",status:"",avatar:""}
+  ];
+  function initialRoom(){
+    return {id:"help-group",title:"救救我",app:"KakaoTalk",dateLabel:"日期待定 · 时间为可修改占位",unread:"99+",memberIds:["Sion","Sakuya","Riku","Jaehee","Yushi","Manager"],messages:messages.map(function(message){return Object.assign({},message)})};
+  }
+  function defaultAccessRules(){var rules={};["kakao","line","sms","phone","gallery","notes","calendar","browser","music","social","settings","vault","contacts","camera","files","mail"].forEach(function(id){rules[id]={mode:id==="vault"?"password":"public",password:"",clueIds:[]}});return rules}
+  function phoneDataDefaults(){return {gallery:[],calls:[],notes:[],calendar:[],browser:[],music:[],social:[],mail:[],settings:{pin:"",vaultPin:"",language:"zh-CN"},accessRules:defaultAccessRules(),clues:[],progress:{foundClues:[],unlockedApps:[],unlockedRecords:[]},homeLayout:["kakao","line","sms","phone","gallery","notes","calendar","browser","music","social","settings","vault","contacts","camera","files","mail"],roomTemplatesVersion:0}}
+  function roomShells(){return [
+    {id:"manager-dm",title:"经纪人私聊",app:"KakaoTalk",memberIds:["Sakuya","Manager"]},
+    {id:"work-group",title:"工作群",app:"KakaoTalk",memberIds:["Sakuya","Manager","Sion","Riku","Jaehee","Yushi"]},
+    {id:"members-group",title:"成员群（无经纪人）",app:"KakaoTalk",memberIds:["Sakuya","Sion","Riku","Jaehee","Yushi"]},
+    {id:"member-sion",title:"Sion",app:"KakaoTalk",memberIds:["Sakuya","Sion"]},
+    {id:"member-riku",title:"Riku",app:"KakaoTalk",memberIds:["Sakuya","Riku"]},
+    {id:"member-jaehee",title:"Jaehee",app:"KakaoTalk",memberIds:["Sakuya","Jaehee"]},
+    {id:"member-yushi",title:"Yushi",app:"KakaoTalk",memberIds:["Sakuya","Yushi"]},
+    {id:"family-group",title:"家人群",app:"LINE",memberIds:["Sakuya","FamilyMom","FamilyDad","Sister"]},
+    {id:"family-mom",title:"妈妈",app:"LINE",memberIds:["Sakuya","FamilyMom"]},
+    {id:"family-dad",title:"爸爸",app:"LINE",memberIds:["Sakuya","FamilyDad"]},
+    {id:"family-sister",title:"姐姐",app:"LINE",memberIds:["Sakuya","Sister"]},
+    {id:"old-friend",title:"旧友",app:"LINE",memberIds:["Sakuya","OldFriend"]},
+    {id:"sms-inbox",title:"短信收件箱",app:"短信",memberIds:["Sakuya"]}
+  ]}
+  function initialState(){if(embeddedState)return normalizeState(embeddedState);return normalizeState({version:2,activeRoomId:"help-group",selectedProfileId:"Sakuya",selfId:"Sakuya",profiles:defaultProfiles.map(function(profile){return Object.assign({},profile)}),rooms:[initialRoom()],phoneData:phoneDataDefaults()})}
+  function normalizeState(value){
+    if(!value||!Array.isArray(value.profiles)||!Array.isArray(value.rooms)||!value.profiles.length||!value.rooms.length)throw new Error("备份格式无效");
+    var normalizedProfiles=value.profiles.filter(function(profile){return profile&&typeof profile.id==="string"}).map(function(profile){return {id:profile.id.replace(/[^A-Za-z0-9_-]/g,""),displayName:String(profile.displayName||profile.id),nickname:String(profile.nickname||""),status:String(profile.status||""),avatar:String(profile.avatar||"")}}).filter(function(profile){return profile.id});
+    if(!normalizedProfiles.length)throw new Error("备份里没有可用角色");
+    defaultProfiles.filter(function(profile){return ["FamilyMom","FamilyDad","Sister","OldFriend"].includes(profile.id)&&!normalizedProfiles.some(function(item){return item.id===profile.id})}).forEach(function(profile){normalizedProfiles.push(Object.assign({},profile))});
+    var profileIds=normalizedProfiles.map(function(profile){return profile.id});
+    var normalizedRooms=value.rooms.filter(function(room){return room&&typeof room.id==="string"}).map(function(room){
+      var roomId=room.id.replace(/[^A-Za-z0-9_-]/g,"")||("room-"+Date.now());
+      var members=Array.isArray(room.memberIds)?room.memberIds.filter(function(id){return profileIds.includes(id)}):[];
+      var roomMessages=Array.isArray(room.messages)?room.messages.map(function(message){return {type:["message","event","recall"].includes(message.type)?message.type:"message",speaker:String(message.speaker||"Sakuya"),text:String(message.text||""),time:String(message.time||"15:16"),reply:String(message.reply||"")}}):[];
+      return {id:roomId,title:String(room.title||"新聊天室"),app:room.app==="LINE"?"LINE":room.app==="短信"?"短信":"KakaoTalk",dateLabel:String(room.dateLabel||"日期待定"),unread:String(room.unread||""),memberIds:members,messages:roomMessages};
+    });
+    if(!normalizedRooms.length)throw new Error("备份里没有聊天室");
+    var defaults=phoneDataDefaults();var stored=value.phoneData&&typeof value.phoneData==="object"?value.phoneData:{};var phoneData={};
+    if(Number(stored.roomTemplatesVersion||0)<1)roomShells().forEach(function(shell){if(!normalizedRooms.some(function(room){return room.id===shell.id}))normalizedRooms.push({id:shell.id,title:shell.title,app:shell.app,dateLabel:"日期待定",unread:"",memberIds:shell.memberIds.filter(function(id){return profileIds.includes(id)}),messages:[]})});
+    ["gallery","calls","notes","calendar","browser","music","social","mail"].forEach(function(key){phoneData[key]=Array.isArray(stored[key])?stored[key].filter(function(item){return item&&typeof item==="object"}).map(function(item){var clean={};Object.keys(item).forEach(function(field){clean[field]=typeof item[field]==="string"?item[field]:field==="locked"?Boolean(item[field]):Array.isArray(item[field])?item[field].slice():String(item[field]||"")});if(!clean.id)clean.id=key+"-"+Math.random().toString(36).slice(2,9);return clean}):defaults[key]});
+    var settings=stored.settings&&typeof stored.settings==="object"?stored.settings:{};phoneData.settings={pin:String(settings.pin||""),vaultPin:String(settings.vaultPin||""),language:["zh-CN","ko","ja"].includes(settings.language)?settings.language:"zh-CN"};
+    var appIds=Object.keys(defaults.accessRules);var savedRules=stored.accessRules&&typeof stored.accessRules==="object"?stored.accessRules:{};phoneData.accessRules={};appIds.forEach(function(id){var rule=savedRules[id]&&typeof savedRules[id]==="object"?savedRules[id]:defaults.accessRules[id];phoneData.accessRules[id]={mode:["public","password","clue"].includes(rule.mode)?rule.mode:defaults.accessRules[id].mode,password:String(rule.password||""),clueIds:Array.isArray(rule.clueIds)?rule.clueIds.map(String):[]}});
+    phoneData.clues=Array.isArray(stored.clues)?stored.clues.filter(function(clue){return clue&&typeof clue==="object"}).map(function(clue){return {id:String(clue.id||("clue-"+Math.random().toString(36).slice(2,9))),title:String(clue.title||""),text:String(clue.text||""),answer:String(clue.answer||""),sourceApp:String(clue.sourceApp||""),sourceRecordId:String(clue.sourceRecordId||""),targetAppIds:Array.isArray(clue.targetAppIds)?clue.targetAppIds.map(String):[]}}):[];
+    var savedProgress=stored.progress&&typeof stored.progress==="object"?stored.progress:{};phoneData.progress={foundClues:Array.isArray(savedProgress.foundClues)?savedProgress.foundClues.map(String):[],unlockedApps:Array.isArray(savedProgress.unlockedApps)?savedProgress.unlockedApps.map(String):[],unlockedRecords:Array.isArray(savedProgress.unlockedRecords)?savedProgress.unlockedRecords.map(String):[]};
+    var appOrder=Array.isArray(stored.homeLayout)?stored.homeLayout.filter(function(id){return appIds.includes(id)}):defaults.homeLayout;phoneData.homeLayout=appOrder.concat(defaults.homeLayout.filter(function(id){return !appOrder.includes(id)}));phoneData.roomTemplatesVersion=1;
+    return {version:3,activeRoomId:normalizedRooms.some(function(room){return room.id===value.activeRoomId})?value.activeRoomId:normalizedRooms[0].id,selectedProfileId:profileIds.includes(value.selectedProfileId)?value.selectedProfileId:profileIds[0],selfId:profileIds.includes(value.selfId)?value.selfId:profileIds[0],profiles:normalizedProfiles,rooms:normalizedRooms,phoneData:phoneData};
+  }
+  function readSavedState(){try{var saved=localStorage.getItem(storageKey);return saved?normalizeState(JSON.parse(saved)):null}catch(error){return null}}
+  var state=readSavedState()||initialState();
+  var roomList=document.getElementById("roomList");
+  var messageList=document.getElementById("messageList");
+  var messageArea=document.getElementById("messageArea");
+  var listScreen=document.getElementById("listScreen");
+  var listBar=document.getElementById("listBar");
+  var chatScreen=document.getElementById("chatScreen");
+  var searchBox=document.getElementById("searchBox");
+  var activeChatApp="KakaoTalk";
+  var selectedDataIndex=0;
+  var selectedDataSet="gallery";
+  var selectedAccessApp="vault";
+  var selectedClueId="";
+  var activePhoneApp="";
+  var vaultUnlocked=false;
+  var phoneInlineEdit=false;
+  var homeEditing=false;
+  var chatInlineEdit=false;
+  var messageInlineEdit=false;
+  var studioMode=new URLSearchParams(window.location.search).get("studio")==="1";
+  if(studioMode)document.body.classList.add("studio-mode");
+  var activeTab="room";
+  function escapeHtml(value){return String(value).replace(/[&<>"']/g,function(character){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[character]})}
+  function currentRoom(){return state.rooms.find(function(room){return room.id===state.activeRoomId})||state.rooms[0]}
+  function currentProfile(){return state.profiles.find(function(profile){return profile.id===state.selectedProfileId})||state.profiles[0]}
+  function getProfile(id){return state.profiles.find(function(profile){return profile.id===id})||{id:id,displayName:id,nickname:"",status:"",avatar:""}}
+  function latestMessage(room){return room.messages.length?room.messages[room.messages.length-1]:null}
+  function safeImageSource(source){return /^https?:\/\//i.test(source)||/^data:image\/(png|jpeg|gif|webp);base64,/i.test(source)}
+  function avatarHtml(id,className){
+    var profile=getProfile(id);
+    var shortName=(profile.displayName||id||"?").trim().slice(0,1)||"?";
+    var image=safeImageSource(profile.avatar)?'<img src="'+escapeHtml(profile.avatar)+'" alt="">':escapeHtml(shortName);
+    var safeId=String(id).replace(/[^A-Za-z0-9_-]/g,"");
+    return '<span class="'+className+' avatar-'+safeId+'">'+image+'</span>';
+  }
+  function roomMembersLabel(room){return room.memberIds.length+" 位成员 · "+room.app}
+  function displayMessageText(message){return message.type==="event"?message.text:(message.speaker?getProfile(message.speaker).displayName+"：":"")+message.text}
+  function renderRoomList(){
+    var sourceApp=activeChatApp==="KakaoTalk"?"kakao":activeChatApp==="LINE"?"line":activeChatApp==="短信"?"sms":"";
+    roomList.innerHTML=(sourceApp?clueSourceMarkup(sourceApp):"")+state.rooms.filter(function(room){return !activeChatApp||room.app===activeChatApp}).map(function(room){
+      var last=latestMessage(room);
+      var faces=room.memberIds.slice(0,4).map(function(id){return avatarHtml(id,"mini-face")}).join("");
+      if(!faces)faces='<span class="mini-face">?</span>';
+      var preview=last?displayMessageText(last):"还没有消息";
+      var time=last&&last.time?last.time:"";
+      var search=(room.title+" "+room.app+" "+preview).toLowerCase();
+      return '<div class="chat-row" data-room-id="'+escapeHtml(room.id)+'" data-search="'+escapeHtml(search)+'" role="button" tabindex="0" aria-label="打开'+escapeHtml(room.title)+'聊天室"><div class="group-avatar" aria-hidden="true">'+faces+'</div><div class="row-copy"><div class="row-heading"><span class="row-name">'+escapeHtml(room.title)+'</span><span class="row-time">'+escapeHtml(time)+'</span></div><div class="row-preview">'+escapeHtml(preview)+'</div></div>'+(room.unread?'<span class="unread">'+escapeHtml(room.unread)+'</span>':'')+'</div>';
+    }).join("");
+    var legacy=document.createElement("div");legacy.id="openChat";legacy.className="legacy-open-chat";legacy.setAttribute("aria-hidden","true");roomList.appendChild(legacy);
+    renderPhoneChatEditor();
+  }
+  function renderMembers(room){
+    var memberList=document.getElementById("memberList");
+    memberList.innerHTML=room.memberIds.map(function(id){var profile=getProfile(id);var meta=profile.status||profile.nickname;return '<span class="member-chip" title="'+escapeHtml([profile.nickname,profile.status].filter(Boolean).join(" · "))+'">'+escapeHtml(profile.nickname||profile.displayName)+(meta?'<span class="member-meta">'+escapeHtml(profile.status||"")+'</span>':'')+'</span>'}).join("");
+    document.getElementById("memberSheetTitle").textContent="成员（"+room.memberIds.length+"）";
+  }
+  function renderMessages(room){
+    messageList.innerHTML=room.messages.map(function(message,index){
+      var time=escapeHtml(message.time||"");
+      if(message.type==="event")return '<div class="system-event"><span>'+escapeHtml(message.text)+'</span><span class="system-time">'+time+'</span></div>';
+      if(message.type==="recall")return '<div class="system-event"><span>'+escapeHtml(getProfile(message.speaker).displayName+" "+message.text)+'</span><span class="system-time">'+time+'</span></div>';
+      var self=message.speaker===state.selfId;
+      var previous=room.messages[index-1];var next=room.messages[index+1];
+      var continued=previous&&previous.type==="message"&&previous.speaker===message.speaker;
+      var lastInRun=!next||next.type!=="message"||next.speaker!==message.speaker;
+      var profile=getProfile(message.speaker);
+      var sender=!self&&!continued?'<div class="sender">'+escapeHtml(profile.displayName)+'</div>':"";
+      var reply=message.reply?'<div class="reply-quote">回复：'+escapeHtml(message.reply)+'</div>':"";
+      var body=escapeHtml(message.text).replace("（流泪的大嘴吉表情包）",'<span class="sticker-placeholder">（流泪的大嘴吉表情包）</span>');
+      var bubble='<div class="bubble">'+reply+body+'</div>';
+      var clock=lastInRun?'<span class="message-time">'+time+'</span>':"";
+      var face=self?"":avatarHtml(message.speaker,"avatar");
+      return '<div class="message-row '+(self?"self ":"")+(continued?"continued":"")+'">'+face+'<div class="message-column">'+sender+'<div class="message-inner">'+bubble+clock+'</div></div></div>';
+    }).join("");
+  }
+  function renderPreview(){
+    var room=currentRoom();var latest=latestMessage(room);
+    document.getElementById("statusTime").textContent=latest&&latest.time?latest.time:"15:46";
+    document.getElementById("appTitle").textContent=activeChatApp||room.app;
+    document.getElementById("activeRoomName").textContent=room.title;
+    document.getElementById("activeRoomInfo").textContent=roomMembersLabel(room);
+    document.getElementById("datePill").textContent=room.dateLabel;
+    renderRoomList();renderMembers(room);renderMessages(room);
+  }
+  function setSaveStatus(text,isError){var status=document.getElementById("saveStatus");status.textContent=text;status.style.background=isError?"#f9e9e6":"#edf5eb";status.style.color=isError?"#a34f43":"#597c57"}
+  function saveState(){try{localStorage.setItem(storageKey,JSON.stringify(state));setSaveStatus("已保存到浏览器",false)}catch(error){setSaveStatus("保存失败，请导出备份",true)}}
+  function profileOptions(selected){return state.profiles.map(function(profile){return '<option value="'+escapeHtml(profile.id)+'"'+(profile.id===selected?' selected':'')+'>'+escapeHtml(profile.displayName)+'</option>'}).join("")}
+  function speakerOptions(selected){
+    var options=state.profiles.map(function(profile){return {id:profile.id,label:profile.displayName}});
+    state.rooms.forEach(function(room){room.messages.forEach(function(message){if(message.speaker&&!options.some(function(option){return option.id===message.speaker}))options.push({id:message.speaker,label:message.speaker})})});
+    if(selected&&!options.some(function(option){return option.id===selected}))options.push({id:selected,label:selected});
+    return options.map(function(option){return '<option value="'+escapeHtml(option.id)+'"'+(option.id===selected?' selected':'')+'>'+escapeHtml(option.label)+'</option>'}).join("");
+  }
+  function renderRoomSelect(){document.getElementById("roomSelect").innerHTML=state.rooms.map(function(room){return '<option value="'+escapeHtml(room.id)+'"'+(room.id===state.activeRoomId?' selected':'')+'>'+escapeHtml(room.title)+'</option>'}).join("")}
+  function renderMemberPicker(){
+    var room=currentRoom();
+    document.getElementById("memberPicker").innerHTML=state.profiles.map(function(profile){return '<label class="member-option"><input type="checkbox" data-member-id="'+escapeHtml(profile.id)+'"'+(room.memberIds.includes(profile.id)?' checked':'')+'><span>'+escapeHtml(profile.displayName)+'</span></label>'}).join("");
+  }
+  function renderMessageCards(){
+    var room=currentRoom();
+    document.getElementById("messageCount").textContent=room.messages.length+" 条";
+    document.getElementById("messageEditorList").innerHTML=room.messages.map(function(message,index){
+      var search=(message.speaker+" "+message.text+" "+message.reply+" "+(index+1)).toLowerCase();
+      var typeLabel=message.type==="event"?"系统事件":message.type==="recall"?"撤回消息":"聊天消息";
+      return '<article class="message-card" data-message-index="'+index+'" data-search="'+escapeHtml(search)+'"><div class="message-card-head"><span>第 '+(index+1)+' 条 · '+typeLabel+'</span><div class="message-card-actions"><button type="button" data-action="up" data-index="'+index+'" aria-label="上移">↑</button><button type="button" data-action="down" data-index="'+index+'" aria-label="下移">↓</button><button type="button" data-action="delete" data-index="'+index+'" aria-label="删除消息">×</button></div></div><div class="message-fields"><label class="editor-field"><span class="editor-label">发言者</span><select data-message-field="speaker" data-index="'+index+'">'+speakerOptions(message.speaker)+'</select></label><label class="editor-field"><span class="editor-label">时间</span><input type="time" data-message-field="time" data-index="'+index+'" value="'+escapeHtml(message.time||"")+'"></label><label class="editor-field"><span class="editor-label">消息类型</span><select data-message-field="type" data-index="'+index+'"><option value="message"'+(message.type==="message"?' selected':'')+'>聊天消息</option><option value="event"'+(message.type==="event"?' selected':'')+'>系统事件</option><option value="recall"'+(message.type==="recall"?' selected':'')+'>撤回消息</option></select></label><label class="editor-field message-text-field"><span class="editor-label">消息内容</span><textarea data-message-field="text" data-index="'+index+'">'+escapeHtml(message.text)+'</textarea></label><label class="editor-field message-reply-field"><span class="editor-label">引用内容（可留空）</span><input data-message-field="reply" data-index="'+index+'" value="'+escapeHtml(message.reply||"")+'"></label></div></article>';
+    }).join("");
+    applyMessageFilter();
+  }
+  function applyMessageFilter(){var query=document.getElementById("messageSearch").value.trim().toLowerCase();document.querySelectorAll(".message-card").forEach(function(card){card.hidden=query&&!card.dataset.search.includes(query)})}
+  function renderProfileEditor(){
+    var profile=currentProfile();
+    document.getElementById("profileSelect").innerHTML=state.profiles.map(function(item){return '<option value="'+escapeHtml(item.id)+'"'+(item.id===profile.id?' selected':'')+'>'+escapeHtml(item.displayName)+'</option>'}).join("");
+    document.getElementById("profileNameInput").value=profile.displayName;
+    document.getElementById("profileNicknameInput").value=profile.nickname;
+    document.getElementById("profileStatusInput").value=profile.status;
+    document.getElementById("profileAvatarInput").value=profile.avatar.startsWith("data:image/")?"":profile.avatar;
+    document.getElementById("profilePreviewAvatar").innerHTML=safeImageSource(profile.avatar)?'<img src="'+escapeHtml(profile.avatar)+'" alt="">':escapeHtml((profile.displayName||profile.id).slice(0,1));
+    document.getElementById("profilePreviewName").textContent=profile.displayName;
+    document.getElementById("profilePreviewMeta").textContent=[profile.nickname,profile.status].filter(Boolean).join(" · ")||"暂无昵称或状态";
+  }
+  function renderEditor(){
+    renderRoomSelect();renderMemberPicker();renderMessageCards();renderProfileEditor();renderPhoneEditor();
+    var phoneUrl=new URL(window.location.href);phoneUrl.searchParams.delete("studio");document.getElementById("studioLink").href=phoneUrl.toString();
+    var room=currentRoom();
+    document.getElementById("roomTitleInput").value=room.title;
+    document.getElementById("roomAppInput").value=room.app;
+    document.getElementById("roomDateInput").value=room.dateLabel;
+    document.getElementById("roomSelect").value=room.id;
+    document.getElementById("profileSelect").value=currentProfile().id;
+    document.querySelectorAll("[data-editor-tab]").forEach(function(button){var selected=button.dataset.editorTab===activeTab;button.classList.toggle("active",selected);button.setAttribute("aria-selected",selected?"true":"false")});
+    document.getElementById("roomEditorView").classList.toggle("active",activeTab==="room");
+    document.getElementById("profileEditorView").classList.toggle("active",activeTab==="profile");
+    document.getElementById("phoneEditorView").classList.toggle("active",activeTab==="phone");
+  }
+  function renderAll(){renderPreview();renderEditor();renderLockNotifications();if(activePhoneApp)renderAppScreen(activePhoneApp);if(document.getElementById("homeScreen").style.display!=="none")renderHomeScreen()}
+  function openRoom(id){state.activeRoomId=id;activeChatApp=currentRoom().app;saveState();renderAll();listScreen.style.display="none";listBar.style.display="none";searchBox.classList.remove("open");chatScreen.classList.add("open");document.getElementById("homeScreen").style.display="none";document.getElementById("appScreen").classList.remove("open");renderPhoneMessageEditor();messageArea.scrollTop=0}
+  var appCatalog=[{id:"kakao",label:{"zh-CN":"KakaoTalk","ko":"카카오톡","ja":"カカオトーク"}},{id:"line",label:{"zh-CN":"LINE","ko":"LINE","ja":"LINE"}},{id:"sms",label:{"zh-CN":"信息","ko":"메시지","ja":"メッセージ"}},{id:"phone",label:{"zh-CN":"电话","ko":"전화","ja":"電話"}},{id:"contacts",label:{"zh-CN":"通讯录","ko":"연락처","ja":"連絡先"}},{id:"camera",label:{"zh-CN":"相机","ko":"카메라","ja":"カメラ"}},{id:"gallery",label:{"zh-CN":"照片","ko":"사진","ja":"写真"}},{id:"files",label:{"zh-CN":"文件","ko":"파일","ja":"ファイル"}},{id:"notes",label:{"zh-CN":"备忘录","ko":"메모","ja":"メモ"}},{id:"calendar",label:{"zh-CN":"日历","ko":"캘린더","ja":"カレンダー"}},{id:"browser",label:{"zh-CN":"Safari","ko":"Safari","ja":"Safari"}},{id:"music",label:{"zh-CN":"音乐","ko":"음악","ja":"音楽"}},{id:"mail",label:{"zh-CN":"邮件","ko":"메일","ja":"メール"}},{id:"social",label:{"zh-CN":"社交动态","ko":"소셜","ja":"SNS"}},{id:"settings",label:{"zh-CN":"设置","ko":"설정","ja":"設定"}},{id:"vault",label:{"zh-CN":"私密空间","ko":"보관함","ja":"プライベート"}}];
+  var dataSchemas={gallery:[{key:"title",label:"照片名称"},{key:"date",label:"日期"},{key:"caption",label:"备注",type:"textarea"},{key:"accessMode",label:"内容访问",type:"access"},{key:"clueIds",label:"关联线索",type:"clues",multiple:true},{key:"src",label:"图片网址",type:"url"}],calls:[{key:"contact",label:"联系人"},{key:"number",label:"号码"},{key:"direction",label:"通话类型"},{key:"time",label:"时间"},{key:"duration",label:"时长"}],notes:[{key:"title",label:"标题"},{key:"date",label:"日期"},{key:"body",label:"内容",type:"textarea"},{key:"accessMode",label:"内容访问",type:"access"},{key:"clueIds",label:"关联线索",type:"clues",multiple:true}],calendar:[{key:"title",label:"事项"},{key:"date",label:"日期"},{key:"time",label:"时间"},{key:"detail",label:"备注",type:"textarea"}],browser:[{key:"title",label:"页面标题"},{key:"url",label:"网址"},{key:"time",label:"访问时间"}],music:[{key:"title",label:"曲名"},{key:"artist",label:"艺人"},{key:"album",label:"专辑"},{key:"time",label:"播放时间"}],social:[{key:"platform",label:"平台"},{key:"author",label:"发布者"},{key:"time",label:"发布时间"},{key:"text",label:"动态内容",type:"textarea"}],mail:[{key:"sender",label:"发件人"},{key:"subject",label:"主题"},{key:"time",label:"时间"},{key:"body",label:"正文",type:"textarea"},{key:"accessMode",label:"内容访问",type:"access"},{key:"clueIds",label:"关联线索",type:"clues",multiple:true}]};
+  function appIconSvg(id){var icons={kakao:'<path d="M32 12c-11 0-20 6.7-20 15 0 5.2 3.8 9.8 9.6 12.4l-2.1 8.1 9.1-5.8c1.1.2 2.3.3 3.4.3 11 0 20-6.7 20-15S43 12 32 12Z" fill="#171717"/><circle cx="25" cy="27" r="2" fill="#fee500"/><circle cx="32" cy="27" r="2" fill="#fee500"/><circle cx="39" cy="27" r="2" fill="#fee500"/>',line:'<path d="M32 12c-11.1 0-20 7.1-20 16 0 7.9 7.2 14.5 16.9 15.8l-1.2 7 9.5-6.4C46 41.9 52 35.5 52 28c0-8.9-8.9-16-20-16Z" fill="#fff"/><text x="32" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="#06c755">LINE</text>',sms:'<path d="M12 17a7 7 0 0 1 7-7h26a7 7 0 0 1 7 7v17a7 7 0 0 1-7 7H31l-10 8v-8h-2a7 7 0 0 1-7-7V17Z" fill="#fff"/><path d="M21 23h22M21 30h15" stroke="#35c85b" stroke-width="3" stroke-linecap="round"/>',phone:'<path d="M20 11c-2 0-7 5-7 8 0 12 20 32 32 32 3 0 8-5 8-7l-9-8-6 6c-5-2-12-9-14-14l6-6-8-11h-2Z" fill="#fff"/>',contacts:'<circle cx="25" cy="23" r="8" fill="#fff"/><path d="M10 49c1-9 7-14 15-14s14 5 15 14" fill="#fff"/><path d="M43 19h9M43 28h9M43 37h9" stroke="#dff1ff" stroke-width="3" stroke-linecap="round"/>',camera:'<path d="M11 20h10l4-5h14l4 5h8a5 5 0 0 1 5 5v20a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5V25a5 5 0 0 1 5-5Z" fill="#fff"/><circle cx="32" cy="34" r="10" fill="#5d6269"/><circle cx="32" cy="34" r="6" fill="#a7d5ff"/>',gallery:'<g fill="none" stroke-width="5" stroke-linecap="round"><path stroke="#ff6257" d="M32 32C17 14 24 7 31 14c5 5 2 12 1 18Z"/><path stroke="#f7a52b" d="M32 32c18-15 25-8 18-1-5 5-12 2-18 1Z"/><path stroke="#7bbc42" d="M32 32c15 18 8 25 1 18-5-5-2-12-1-18Z"/><path stroke="#4e9df2" d="M32 32C14 47 7 40 14 33c5-5 12-2 18-1Z"/><path stroke="#a877d4" d="M32 32c-8-21 1-24 5-15 3 6-1 11-5 15Z"/></g>',files:'<path d="M8 18a5 5 0 0 1 5-5h14l5 6h15a5 5 0 0 1 5 5v20a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5V18Z" fill="#fff"/><path d="M9 24h42" stroke="#c6e8ff" stroke-width="3"/>',notes:'<rect x="14" y="10" width="36" height="44" rx="5" fill="#fff"/><path d="M16 20h32" stroke="#f4c542" stroke-width="5"/><path d="M21 29h22M21 36h22M21 43h15" stroke="#d2d5d9" stroke-width="2" stroke-linecap="round"/>',calendar:'<rect x="11" y="12" width="42" height="42" rx="6" fill="#fff"/><path d="M11 23h42" stroke="#f25454" stroke-width="10"/><path d="M21 9v8M43 9v8" stroke="#555" stroke-width="3" stroke-linecap="round"/><path d="M21 32h7M36 32h7M21 41h7M36 41h7" stroke="#9b9da2" stroke-width="3" stroke-linecap="round"/>',browser:'<circle cx="32" cy="32" r="23" fill="#fff"/><circle cx="32" cy="32" r="18" fill="none" stroke="#2b87e5" stroke-width="4"/><path d="m42 20-7 16-15 8 8-16 14-8Z" fill="#f44d54"/><path d="m28 28 7 8" stroke="#fff" stroke-width="2"/>',music:'<path d="M39 12v29a8 8 0 1 1-5-7V20l18-4v20a8 8 0 1 1-5-7V12l-8 2Z" fill="#fff"/>',mail:'<rect x="9" y="15" width="46" height="34" rx="6" fill="#fff"/><path d="m11 19 21 17 21-17" fill="none" stroke="#3d9eef" stroke-width="4" stroke-linejoin="round"/>',social:'<rect x="10" y="10" width="44" height="44" rx="13" fill="none" stroke="#fff" stroke-width="5"/><circle cx="32" cy="32" r="10" fill="none" stroke="#fff" stroke-width="4"/><circle cx="46" cy="18" r="3" fill="#fff"/>',settings:'<path d="m28 9 8 0 2 6 5 2 5-3 6 6-3 5 2 5 6 2v8l-6 2-2 5 3 5-6 6-5-3-5 2-2 6h-8l-2-6-5-2-5 3-6-6 3-5-2-5-6-2v-8l6-2 2-5-3-5 6-6 5 3 5-2 2-6Z" fill="#fff"/><circle cx="32" cy="36" r="9" fill="#858b92"/>',vault:'<rect x="15" y="27" width="34" height="26" rx="6" fill="#fff"/><path d="M22 27v-7a10 10 0 0 1 20 0v7" fill="none" stroke="#fff" stroke-width="5"/><circle cx="32" cy="39" r="3" fill="#454153"/>'};return '<svg viewBox="0 0 64 64" aria-hidden="true">'+(icons[id]||icons.files)+'</svg>'}
+  var dataSchemas={gallery:[{key:"title",label:"照片名称"},{key:"date",label:"日期"},{key:"caption",label:"备注",type:"textarea"},{key:"accessMode",label:"内容访问",type:"access"},{key:"clueIds",label:"关联线索",type:"clues",multiple:true},{key:"src",label:"图片网址",type:"url"}],calls:[{key:"contact",label:"联系人"},{key:"number",label:"号码"},{key:"direction",label:"通话类型"},{key:"time",label:"时间"},{key:"duration",label:"时长"}],notes:[{key:"title",label:"标题"},{key:"date",label:"日期"},{key:"body",label:"内容",type:"textarea"},{key:"accessMode",label:"内容访问",type:"access"},{key:"clueIds",label:"关联线索",type:"clues",multiple:true}],calendar:[{key:"title",label:"事项"},{key:"date",label:"日期"},{key:"time",label:"时间"},{key:"detail",label:"备注",type:"textarea"}],browser:[{key:"title",label:"页面标题"},{key:"url",label:"网址"},{key:"time",label:"访问时间"}],music:[{key:"title",label:"曲名"},{key:"artist",label:"艺人"},{key:"album",label:"专辑"},{key:"time",label:"播放时间"}],social:[{key:"platform",label:"平台"},{key:"author",label:"发布者"},{key:"time",label:"发布时间"},{key:"text",label:"动态内容",type:"textarea"}],mail:[{key:"sender",label:"发件人"},{key:"subject",label:"主题"},{key:"time",label:"时间"},{key:"body",label:"正文",type:"textarea"},{key:"accessMode",label:"内容访问",type:"access"},{key:"clueIds",label:"关联线索",type:"clues",multiple:true}]};
+  function appIconSvg(id){var shapes={kakao:'<path d="M32 12c-11 0-20 7-20 15 0 5 4 10 10 12l-2 8 10-6c12 1 22-6 22-14S44 12 32 12Z" fill="#171717"/><circle cx="25" cy="27" r="2" fill="#fee500"/><circle cx="32" cy="27" r="2" fill="#fee500"/><circle cx="39" cy="27" r="2" fill="#fee500"/>',line:'<path d="M32 12c-11 0-20 7-20 16 0 8 8 15 18 16l-1 7 10-7c8-3 13-9 13-16 0-9-9-16-20-16Z" fill="#fff"/><text x="32" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="#06c755">LINE</text>',sms:'<path d="M12 17a7 7 0 0 1 7-7h26a7 7 0 0 1 7 7v17a7 7 0 0 1-7 7H31l-10 8v-8h-2a7 7 0 0 1-7-7V17Z" fill="#fff"/>',phone:'<path d="M20 11c-3 0-7 5-7 8 0 12 20 32 32 32 3 0 8-5 8-7l-9-8-6 6c-5-2-12-9-14-14l6-6-8-11h-2Z" fill="#fff"/>',contacts:'<circle cx="25" cy="22" r="8" fill="#fff"/><path d="M10 49c1-10 7-15 15-15s14 5 15 15" fill="#fff"/><path d="M43 19h9M43 29h9M43 39h9" stroke="#e6f5ff" stroke-width="3" stroke-linecap="round"/>',camera:'<path d="M10 20h11l4-5h14l4 5h9a5 5 0 0 1 5 5v19a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5V25a5 5 0 0 1 5-5Z" fill="#fff"/><circle cx="32" cy="34" r="11" fill="#68717c"/><circle cx="32" cy="34" r="6" fill="#84c9ff"/>',gallery:'<g fill="none" stroke-width="5" stroke-linecap="round"><path stroke="#fa5c58" d="M32 32C18 13 25 8 31 14c5 5 2 12 1 18Z"/><path stroke="#f5a82c" d="M32 32c19-14 24-7 17-1-5 5-12 2-17 1Z"/><path stroke="#76b843" d="M32 32c14 19 7 24 1 17-5-5-2-12-1-17Z"/><path stroke="#438fe3" d="M32 32C13 46 8 39 14 33c5-5 12-2 18-1Z"/><path stroke="#a676d1" d="M32 32c-8-19 1-24 5-15 3 6-1 11-5 15Z"/></g>',files:'<path d="M8 18a5 5 0 0 1 5-5h14l5 6h15a5 5 0 0 1 5 5v20a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5V18Z" fill="#fff"/>',notes:'<rect x="14" y="10" width="36" height="44" rx="5" fill="#fff"/><path d="M16 20h32" stroke="#f4c542" stroke-width="5"/><path d="M21 30h22M21 38h22M21 46h15" stroke="#d2d5d9" stroke-width="2" stroke-linecap="round"/>',calendar:'<rect x="11" y="12" width="42" height="42" rx="6" fill="#fff"/><path d="M11 23h42" stroke="#f25454" stroke-width="10"/><path d="M21 9v8M43 9v8" stroke="#555" stroke-width="3" stroke-linecap="round"/><path d="M21 33h7M36 33h7M21 42h7M36 42h7" stroke="#9b9da2" stroke-width="3" stroke-linecap="round"/>',browser:'<circle cx="32" cy="32" r="23" fill="#fff"/><circle cx="32" cy="32" r="18" fill="none" stroke="#2b87e5" stroke-width="4"/><path d="m42 20-7 16-15 8 8-16 14-8Z" fill="#f44d54"/>',music:'<path d="M39 12v29a8 8 0 1 1-5-7V20l18-4v20a8 8 0 1 1-5-7V12l-8 2Z" fill="#fff"/>',mail:'<rect x="9" y="15" width="46" height="34" rx="6" fill="#fff"/><path d="m11 19 21 17 21-17" fill="none" stroke="#3d9eef" stroke-width="4"/>',social:'<rect x="10" y="10" width="44" height="44" rx="13" fill="none" stroke="#fff" stroke-width="5"/><circle cx="32" cy="32" r="10" fill="none" stroke="#fff" stroke-width="4"/><circle cx="46" cy="18" r="3" fill="#fff"/>',settings:'<circle cx="32" cy="32" r="19" fill="none" stroke="#fff" stroke-width="8"/><circle cx="32" cy="32" r="7" fill="#fff"/>',vault:'<rect x="15" y="27" width="34" height="26" rx="6" fill="#fff"/><path d="M22 27v-7a10 10 0 0 1 20 0v7" fill="none" stroke="#fff" stroke-width="5"/><circle cx="32" cy="39" r="3" fill="#454153"/>'};return '<svg viewBox="0 0 64 64" aria-hidden="true">'+(shapes[id]||shapes.files)+'</svg>'}
+  function lang(){return state.phoneData.settings.language||"zh-CN"}
+  function appLabel(id){var app=appCatalog.find(function(item){return item.id===id});return app?(app.label[lang()]||app.label["zh-CN"]):id}
+  function localized(zh,ko,ja){return lang()==="ko"?ko:lang()==="ja"?ja:zh}
+  function appRule(id){return state.phoneData.accessRules[id]||{mode:"public",password:"",clueIds:[]}}
+  function cluesSatisfied(ids){return Array.isArray(ids)&&ids.length>0&&ids.every(function(id){return state.phoneData.progress.foundClues.includes(id)})}
+  function appAccessGranted(id){var rule=appRule(id);return rule.mode==="public"||state.phoneData.progress.unlockedApps.includes(id)||rule.mode==="clue"&&cluesSatisfied(rule.clueIds)}
+  function renderAccessGate(id){var rule=appRule(id);var body="";if(rule.mode==="password")body=rule.password?'<p>此 App 需要作者设置的密码。</p><input id="appGatePassword" type="password" autocomplete="off" placeholder="输入密码"><button data-action="verify-app" data-app="'+escapeHtml(id)+'">解锁</button>':'<p>此 App 已设为密码锁，但密码尚未由作者设置。请在制作后台配置；没有预设原作密码。</p>';
+    if(rule.mode==="clue"){var linked=rule.clueIds.map(function(clueId){return state.phoneData.clues.find(function(clue){return clue.id===clueId})}).filter(Boolean);body=linked.length?'<p>发现关联线索后可继续。</p>'+linked.map(function(clue){var source=appLabel(clue.sourceApp)||"来源待定";var found=state.phoneData.progress.foundClues.includes(clue.id);return '<div class="clue-chip"><strong>'+escapeHtml(clue.title||"未命名线索")+'</strong><br>'+escapeHtml(found?(clue.text||"线索已发现"):("尚未发现 · 线索位于"+source))+(clue.sourceRecordId?'<br><small>内容 ID：'+escapeHtml(clue.sourceRecordId)+'</small>':"")+(found?"":'<br><button data-action="go-clue-source" data-app="'+escapeHtml(clue.sourceApp)+'">前往线索来源</button>')+'</div>'}).join(""):'<p>尚未关联线索。请在制作后台添加线索并指定目标 App；不会生成占位剧情。</p>'}
+    return '<div class="access-box"><div class="access-symbol">'+(rule.mode==="password"?"🔒":"✦")+'</div><h3>'+escapeHtml(appLabel(id))+localized("已锁定"," 잠김","はロックされています")+'</h3>'+body+'<button data-action="go-home">返回主屏幕</button></div>'}
+  function showAppGate(id){activePhoneApp=id;document.getElementById("homeScreen").style.display="none";document.getElementById("listBar").style.display="none";document.getElementById("listScreen").style.display="none";document.getElementById("chatScreen").classList.remove("open");document.getElementById("appScreen").classList.add("open");document.getElementById("appScreenTitle").textContent=appLabel(id);document.getElementById("appScreenAction").innerHTML="";document.getElementById("appScreenContent").innerHTML=renderAccessGate(id)}
+  function renderHomeScreen(){
+    var owner=getProfile(state.selfId);document.getElementById("homeGreeting").textContent=(owner.displayName||"Sakuya")+localized("的 iPhone","의 iPhone","の iPhone");
+    document.getElementById("homeCaption").textContent=localized("故事之外的私人空间","이야기 밖의 개인 공간","物語の外にあるプライベート空間");
+    var widget=state.phoneData.calendar[0];document.getElementById("homeWidgetTitle").textContent=localized("日历 · 今天","캘린더 · 오늘","カレンダー · 今日");document.getElementById("homeWidgetText").textContent=widget?[widget.date,widget.time,widget.title].filter(Boolean).join(" · "):localized("没有日历事项","일정이 없습니다","予定はありません");
+    var search=document.getElementById("homeSearch").value.trim().toLowerCase();var icons=state.phoneData.homeLayout.map(function(id){return appCatalog.find(function(app){return app.id===id})}).filter(function(app){return app&&((appLabel(app.id)+" "+app.id).toLowerCase().includes(search))});
+    document.getElementById("appGrid").classList.toggle("editing",homeEditing);
+    document.getElementById("appGrid").innerHTML=icons.map(function(app){return '<button class="app-icon" data-app="'+app.id+'" aria-label="'+escapeHtml(appLabel(app.id))+'"><span class="app-glyph">'+appIconSvg(app.id)+'</span><span class="app-label">'+escapeHtml(appLabel(app.id))+'</span>'+(homeEditing?'<span class="app-move-controls"><span role="button" tabindex="0" data-move-app="'+app.id+'" data-move-direction="up" aria-label="上移">↑</span><span role="button" tabindex="0" data-move-app="'+app.id+'" data-move-direction="down" aria-label="下移">↓</span></span>':"")+'</button>'}).join("")||'<div class="phone-empty">没有匹配的 App</div>';
+    document.getElementById("homeDock").innerHTML=["phone","kakao","line","gallery"].map(function(id){return '<button class="app-icon" data-app="'+id+'" aria-label="'+escapeHtml(appLabel(id))+'"><span class="app-glyph">'+appIconSvg(id)+'</span><span class="app-label">'+escapeHtml(appLabel(id))+'</span></button>'}).join("");
+    document.getElementById("lockButton").textContent=localized("锁定手机","휴대전화 잠금","画面をロック");
+    document.getElementById("homeEditToggle").textContent=homeEditing?localized("完成","완료","完了"):localized("编辑主屏","홈 편집","ホーム編集");
+    var studioUrl=new URL(window.location.href);studioUrl.searchParams.set("studio","1");document.getElementById("openStudioLink").href=studioUrl.toString();
+    document.getElementById("homeSearch").value=search;
+  }
+  function showHome(){activePhoneApp="";document.querySelector(".phone").classList.remove("locked");document.getElementById("homeScreen").style.display="flex";document.getElementById("lockScreen").classList.remove("open");document.getElementById("appScreen").classList.remove("open");document.getElementById("chatScreen").classList.remove("open");document.getElementById("listScreen").style.display="none";document.getElementById("listBar").style.display="none";searchBox.classList.remove("open");document.getElementById("memberSheet").classList.remove("open");renderHomeScreen()}
+  function renderLockNotifications(){
+    var cards=state.rooms.slice().reverse().map(function(room){var message=latestMessage(room);if(!message||!String(message.text||"").trim())return "";var appId=room.app==="LINE"?"line":room.app==="短信"?"sms":"kakao";var appName=room.app==="LINE"?"LINE":room.app==="短信"?localized("信息","메시지","メッセージ"):"KakaoTalk";return '<article class="lock-notification"><div class="lock-notification-head"><span class="lock-notification-app-icon">'+appIconSvg(appId)+'</span><span>'+escapeHtml(appName)+'</span><span class="lock-notification-time">'+escapeHtml(message.time||"")+'</span></div><div class="lock-notification-title">'+escapeHtml(room.title)+'</div><div class="lock-notification-body">'+escapeHtml(message.text)+'</div></article>'}).filter(Boolean).slice(0,3);
+    document.getElementById("lockNotifications").innerHTML=cards.join("");
+  }
+  function lockPhone(){var screen=document.getElementById("lockScreen");var hasPin=Boolean(state.phoneData.settings.pin);document.querySelector(".phone").classList.add("locked");document.getElementById("homeScreen").style.display="none";document.getElementById("appScreen").classList.remove("open");document.getElementById("chatScreen").classList.remove("open");document.getElementById("listScreen").style.display="none";document.getElementById("listBar").style.display="none";screen.classList.add("open");screen.classList.remove("passcode-open");document.getElementById("pinEntry").value="";document.getElementById("lockError").textContent="";document.getElementById("lockCopy").textContent=hasPin?localized("请输入手机密码。","휴대전화 비밀번호를 입력하세요.","スマホのパスコードを入力してください。"):localized("尚未设置密码，可直接进入。","비밀번호가 설정되지 않아 바로 들어갈 수 있습니다.","パスコード未設定のため、そのまま入れます。");document.getElementById("unlockButton").textContent=localized("解锁","잠금 해제","ロック解除");document.getElementById("lockSwipeButton").textContent=hasPin?localized("轻点输入密码","비밀번호 입력","パスコードを入力"):localized("轻点进入手机","탭하여 휴대전화 열기","タップして開く");renderLockNotifications()}
+  function unlockPhone(){var pin=state.phoneData.settings.pin||"";if(pin&&document.getElementById("pinEntry").value!==pin){document.getElementById("lockError").textContent=localized("密码不正确，请再试一次。","비밀번호가 올바르지 않습니다.","パスコードが違います。もう一度お試しください。");return}showHome()}
+  function openPhoneApp(id,bypassRule){
+    if(!bypassRule&&!appAccessGranted(id)){showAppGate(id);return}
+    var chatApp=id==="kakao"?"KakaoTalk":id==="line"?"LINE":id==="sms"?"短信":"";
+    if(chatApp){activeChatApp=chatApp;activePhoneApp="";document.getElementById("homeScreen").style.display="none";document.getElementById("appScreen").classList.remove("open");document.getElementById("chatScreen").classList.remove("open");document.getElementById("listBar").style.display="flex";document.getElementById("listScreen").style.display="flex";document.getElementById("appTitle").textContent=chatApp;document.getElementById("searchInput").value="";renderRoomList();return}
+    activePhoneApp=id;document.getElementById("homeScreen").style.display="none";document.getElementById("listBar").style.display="none";document.getElementById("listScreen").style.display="none";document.getElementById("chatScreen").classList.remove("open");document.getElementById("appScreen").classList.add("open");renderAppScreen(id)
+  }
+  function emptyApp(text){return '<div class="phone-empty">'+escapeHtml(text)+'</div>'}
+  function phoneCard(title,meta,body){return '<article class="phone-card"><div class="phone-card-title">'+escapeHtml(title||"")+'</div>'+(meta?'<div class="phone-card-meta">'+escapeHtml(meta)+'</div>':"")+(body?'<div class="phone-card-body">'+escapeHtml(body)+'</div>':"")+'</article>'}
+  function renderAppScreen(id){
+    var title=appLabel(id);document.getElementById("appScreenTitle").textContent=title;document.getElementById("appScreenAction").textContent="";var data=state.phoneData;var content="";
+    if(id==="gallery"){
+      var photos=data.gallery.filter(function(item){return !item.locked||vaultUnlocked});
+      content='<div class="gallery-tools"><span class="phone-card-meta">'+photos.length+localized(" 张照片","장의 사진","枚の写真")+'</span><button class="phone-primary" data-action="upload-gallery">＋ '+localized("导入照片","사진 가져오기","写真を追加")+'</button></div>';
+      content+=photos.length?'<div class="gallery-grid">'+photos.map(function(item){return '<button class="gallery-tile" data-photo-id="'+escapeHtml(item.id)+'">'+(safeImageSource(item.src)?'<img src="'+escapeHtml(item.src)+'" alt="'+escapeHtml(item.title||"")+'">':escapeHtml(item.title||localized("待添加照片","사진 추가 대기","写真を追加")))+'</button>'}).join("")+'</div>':emptyApp(localized("相册还没有照片。用“导入照片”添加你自己的图片。","앨범이 비어 있습니다. 직접 사진을 가져오세요.","アルバムは空です。「写真を追加」から画像を読み込めます。"));
+    }else if(id==="phone"){
+      content='<article class="phone-card"><div class="phone-card-title">'+localized("拨号","전화 걸기","ダイヤル")+'</div><input class="dial-number" id="dialInput" type="tel" inputmode="tel" placeholder="输入号码" aria-label="输入号码"><div class="dialpad">'+["1","2","3","4","5","6","7","8","9","*","0","#"].map(function(digit){return '<button type="button" data-dial-digit="'+digit+'">'+digit+'</button>'}).join("")+'</div><p class="dialer-hint">'+localized("原型模拟：不会拨打真实电话。","프로토타입 전용: 실제 전화는 걸리지 않습니다.","プロトタイプの表示のみで、実際の発信はしません。")+'</p><button class="phone-primary" style="display:block;width:100%" data-action="mock-call">'+localized("记录模拟拨出","발신 기록 추가","発信履歴を追加")+'</button></article><div class="phone-card"><div class="phone-card-title">'+localized("通话记录","통화 기록","通話履歴")+'</div></div>'+(data.calls.length?data.calls.slice().reverse().map(function(item){return phoneCard(item.contact||item.number||localized("未知联系人","알 수 없는 연락처","不明な連絡先"),(item.direction||"")+(item.time?" · "+item.time:"")+(item.duration?" · "+item.duration:""),item.number&&item.contact?item.number:"")}).join(""):emptyApp(localized("暂无通话记录。可在右侧“其他手机内容”中添加。","통화 기록이 없습니다. 편집기에서 추가할 수 있습니다.","通話履歴はありません。編集画面から追加できます。")));
+    }else if(id==="notes"){
+      content=data.notes.length?data.notes.map(function(item){var hidden=item.locked&&!vaultUnlocked;return '<article class="phone-card" '+(hidden?'data-locked-note="'+escapeHtml(item.id)+'"':'')+'><div class="phone-card-title">'+escapeHtml(item.title||localized("无标题","제목 없음","無題"))+(hidden?'　🔒':"")+'</div><div class="phone-card-meta">'+escapeHtml(item.date||"")+'</div><div class="phone-card-body">'+escapeHtml(hidden?localized("私密便签 · 点击解锁查看","비공개 메모 · 눌러서 잠금 해제","非公開メモ · タップして解除"):(item.body||""))+'</div></article>'}).join(""):emptyApp(localized("暂无备忘录。","메모가 없습니다.","メモはありません。"));
+    }else if(id==="calendar"){
+      content=data.calendar.length?data.calendar.slice().sort(function(a,b){return (a.date||"").localeCompare(b.date||"")}).map(function(item){return phoneCard(item.title,(item.date||"")+(item.time?" · "+item.time:""),item.detail||"")}).join(""):emptyApp(localized("暂无日历事项。","일정이 없습니다.","予定はありません。"));
+    }else if(id==="browser"){
+      content=data.browser.length?data.browser.slice().reverse().map(function(item){return phoneCard(item.title,item.time,item.url||"")}).join(""):emptyApp(localized("暂无浏览记录。","방문 기록이 없습니다.","閲覧履歴はありません。"));
+    }else if(id==="music"){
+      content=data.music.length?data.music.map(function(item){return '<article class="phone-card"><div class="phone-card-title">♫　'+escapeHtml(item.title||localized("未命名曲目","제목 없는 곡","無題の曲"))+'</div><div class="phone-card-meta">'+escapeHtml([item.artist,item.album,item.time].filter(Boolean).join(" · ")||"")+'</div></article>'}).join(""):emptyApp(localized("暂无播放记录。","재생 기록이 없습니다.","再生履歴はありません。"));
+    }else if(id==="social"){
+      content=data.social.length?data.social.slice().reverse().map(function(item){return phoneCard(item.author||item.platform,item.time,item.text||"")}).join(""):emptyApp(localized("暂无社交动态。","소셜 게시물이 없습니다.","SNSの投稿はありません。"));
+    }else if(id==="settings"){
+      content='<article class="phone-card"><div class="phone-card-title">'+localized("手机设置","휴대전화 설정","スマホ設定")+'</div><div class="phone-card-meta">'+localized("密码与其他手机内容可在旁边的可视化编辑区设置。","비밀번호와 콘텐츠는 편집 화면에서 설정할 수 있습니다.","パスコードや内容は編集画面で設定できます。")+'</div></article><label class="phone-form-field">'+localized("显示语言","표시 언어","表示言語")+'<select id="phoneLanguageSelect"><option value="zh-CN">简体中文</option><option value="ko">한국어</option><option value="ja">日本語</option></select></label><article class="phone-card"><div class="phone-card-title">'+localized("锁屏密码","잠금 비밀번호","ロックパスコード")+'</div><div class="phone-card-meta">'+(data.settings.pin?localized("已设置 · 点桌面右上角锁定","설정됨 · 홈에서 잠글 수 있습니다","設定済み · ホーム画面からロックできます"):localized("未设置 · 不会预设故事密码","미설정 · 비밀번호를 임의로 정하지 않았습니다","未設定 · パスコードは設定していません"))+'</div></article>';
+    }else if(id==="vault"){
+      var privateCount=data.notes.filter(function(item){return item.locked}).length+data.gallery.filter(function(item){return item.locked}).length;
+      content='<article class="phone-card"><div class="phone-card-title">'+localized("私密空间","보관함","プライベート")+'</div><div class="phone-card-meta">'+localized("此处只显示你标记为私密的照片和便签。","비공개로 표시한 사진과 메모만 표시됩니다.","非公開に設定した写真とメモを表示します。")+'</div></article>';
+      if(!vaultUnlocked&&data.settings.vaultPin)content+='<button class="phone-primary" data-action="unlock-vault">'+localized("输入私密密码","비밀번호 입력","パスコードを入力")+'</button>';
+      if(vaultUnlocked||!data.settings.vaultPin){var privateNotes=data.notes.filter(function(item){return item.locked}).map(function(item){return phoneCard(item.title||localized("私密便签","비공개 메모","非公開メモ"),item.date,item.body||"")}).join("");var privatePhotos=data.gallery.filter(function(item){return item.locked}).map(function(item){return '<article class="phone-card">'+(safeImageSource(item.src)?'<img style="width:100%;max-height:210px;object-fit:cover;border-radius:10px" src="'+escapeHtml(item.src)+'" alt="">':"")+phoneCard(item.title||localized("私密照片","비공개 사진","非公開写真"),item.date,item.caption)+'</article>'}).join("");content+=privateCount?privateNotes+privatePhotos:emptyApp(localized("还没有标记为私密的内容。","비공개 항목이 없습니다.","非公開の項目はありません。"))}
+    }
+    document.getElementById("appScreenContent").innerHTML=content;
+    var mobileStudio=document.getElementById("mobileStudioLink");if(mobileStudio){var studioUrl=new URL(window.location.href);studioUrl.searchParams.set("studio","1");mobileStudio.href=studioUrl.toString()}
+    var languageSelect=document.getElementById("phoneLanguageSelect");if(languageSelect)languageSelect.value=lang();
+  }
+  function unlockVault(){var pin=state.phoneData.settings.vaultPin||"";if(!pin){vaultUnlocked=true;return true}var entered=window.prompt(localized("请输入私密内容密码","비공개 콘텐츠 비밀번호를 입력하세요","プライベート用パスコードを入力してください"));if(entered===pin){vaultUnlocked=true;return true}return false}
+  function roomEditorLabel(room){return room.title+" · "+room.app}
+  function dataItemLabel(item,index){return item.title||item.contact||item.author||item.platform||item.artist||("项目 "+(index+1))}
+  function renderPhoneEditor(){
+    var selector=document.getElementById("dataSetSelect");if(!selector)return;selector.value=selectedDataSet;var list=state.phoneData[selectedDataSet]||[];if(selectedDataIndex>=list.length)selectedDataIndex=Math.max(0,list.length-1);
+    document.getElementById("dataRecordList").innerHTML=list.map(function(item,index){return '<button type="button" class="data-record-button '+(index===selectedDataIndex?'active':'')+'" data-record-index="'+index+'">'+escapeHtml(dataItemLabel(item,index))+'</button>'}).join("")+(list.length?"":'<span class="editor-help">暂无项目。添加后可在手机预览里查看。</span>');
+    document.getElementById("galleryUploadLabel").style.display=selectedDataSet==="gallery"?"inline-flex":"none";
+    var fields=document.getElementById("dataEditorFields");if(!list.length){fields.innerHTML="";return}var item=list[selectedDataIndex];
+    fields.innerHTML=dataSchemas[selectedDataSet].map(function(field){var value=item[field.key]===undefined?"":item[field.key];if(field.type==="checkbox")return '<label class="member-option" style="margin:0 0 12px"><input type="checkbox" data-data-field="'+field.key+'"'+(value?' checked':'')+'><span>'+escapeHtml(field.label)+'</span></label>';if(field.key==="src"&&String(value).startsWith("data:image/"))return '<p class="editor-help">图片已上传；更换图片请再次使用“上传照片”。</p>';var input=field.type==="textarea"?'<textarea data-data-field="'+field.key+'">'+escapeHtml(value)+'</textarea>':'<input type="'+(field.type||"text")+'" data-data-field="'+field.key+'" value="'+escapeHtml(value)+'">';return '<label class="editor-field"><span class="editor-label">'+escapeHtml(field.label)+'</span>'+input+'</label>'}).join("");
+    document.getElementById("devicePinInput").value=state.phoneData.settings.pin;document.getElementById("vaultPinInput").value=state.phoneData.settings.vaultPin;document.getElementById("languageInput").value=lang();
+  }
+  dataSchemas.music.push({key:"source",label:"音频网址",type:"url"});
+  function selectedIds(select){return Array.from(select.selectedOptions).map(function(option){return option.value})}
+  function clueOptions(selected){var ids=Array.isArray(selected)?selected:String(selected||"").split(",").filter(Boolean);return state.phoneData.clues.map(function(clue){return '<option value="'+escapeHtml(clue.id)+'"'+(ids.includes(clue.id)?' selected':'')+'>'+escapeHtml(clue.title||clue.id)+'</option>'}).join("")}
+  function renderAccessEditor(){var appSelect=document.getElementById("accessAppSelect");if(!appSelect)return;appSelect.innerHTML=appCatalog.map(function(app){return '<option value="'+app.id+'">'+escapeHtml(appLabel(app.id))+'</option>'}).join("");if(!appCatalog.some(function(app){return app.id===selectedAccessApp}))selectedAccessApp="vault";appSelect.value=selectedAccessApp;var rule=appRule(selectedAccessApp);document.getElementById("accessModeSelect").value=rule.mode;document.getElementById("accessPasswordInput").value=rule.password;document.getElementById("accessClueSelect").innerHTML=clueOptions(rule.clueIds);Array.from(document.getElementById("accessClueSelect").options).forEach(function(option){option.selected=rule.clueIds.includes(option.value)})}
+  function renderClueEditor(){var select=document.getElementById("clueSelect");if(!select)return;document.getElementById("clueCount").textContent=state.phoneData.clues.length+" 条";select.innerHTML=state.phoneData.clues.map(function(clue){return '<option value="'+escapeHtml(clue.id)+'">'+escapeHtml(clue.title||"未命名线索")+'</option>'}).join("");var clue=state.phoneData.clues.find(function(item){return item.id===selectedClueId});if(!clue&&state.phoneData.clues.length){clue=state.phoneData.clues[0];selectedClueId=clue.id}select.value=clue?clue.id:"";document.getElementById("clueTitleInput").value=clue?clue.title:"";document.getElementById("clueTextInput").value=clue?clue.text:"";document.getElementById("clueAnswerInput").value=clue?clue.answer:"";document.getElementById("clueSourceRecordInput").value=clue?clue.sourceRecordId:"";var source=document.getElementById("clueSourceSelect");source.innerHTML='<option value="">未指定</option>'+appCatalog.map(function(app){return '<option value="'+app.id+'">'+escapeHtml(appLabel(app.id))+'</option>'}).join("");source.value=clue?clue.sourceApp:"";var targets=document.getElementById("clueTargetSelect");targets.innerHTML=appCatalog.map(function(app){return '<option value="'+app.id+'">'+escapeHtml(appLabel(app.id))+'</option>'}).join("");Array.from(targets.options).forEach(function(option){option.selected=Boolean(clue&&clue.targetAppIds.includes(option.value))});document.getElementById("deleteClueButton").disabled=!clue}
+  function syncClueTargets(clue,nextTargets){var previous=clue.targetAppIds.slice();previous.forEach(function(appId){var rule=state.phoneData.accessRules[appId];if(rule){rule.clueIds=rule.clueIds.filter(function(id){return id!==clue.id});if(!rule.clueIds.length&&rule.mode==="clue")rule.mode="public"}});clue.targetAppIds=nextTargets;nextTargets.forEach(function(appId){var rule=appRule(appId);rule.mode="clue";if(!rule.clueIds.includes(clue.id))rule.clueIds.push(clue.id);state.phoneData.accessRules[appId]=rule})}
+  function renderPhoneEditor(){var selector=document.getElementById("dataSetSelect");if(!selector)return;selector.value=selectedDataSet;var list=state.phoneData[selectedDataSet]||[];if(selectedDataIndex>=list.length)selectedDataIndex=Math.max(0,list.length-1);document.getElementById("dataRecordList").innerHTML=list.map(function(item,index){return '<button type="button" class="data-record-button '+(index===selectedDataIndex?'active':'')+'" data-record-index="'+index+'">'+escapeHtml(dataItemLabel(item,index))+'</button>'}).join("")+(list.length?"":'<span class="editor-help">暂无项目。添加后可在手机预览里查看。</span>');document.getElementById("galleryUploadLabel").style.display=selectedDataSet==="gallery"?"inline-flex":"none";var fields=document.getElementById("dataEditorFields");if(list.length){var item=list[selectedDataIndex];fields.innerHTML=dataSchemas[selectedDataSet].map(function(field){var value=item[field.key]===undefined?"":item[field.key];if(field.key==="src"&&String(value).startsWith("data:image/"))return '<p class="editor-help">照片已上传；可通过“上传照片”替换。</p>';if(field.type==="checkbox")return '<label class="member-option" style="margin:0 0 12px"><input type="checkbox" data-data-field="'+field.key+'"'+(value?' checked':'')+'><span>'+escapeHtml(field.label)+'</span></label>';if(field.type==="access")return '<label class="editor-field"><span class="editor-label">'+field.label+'</span><select data-data-field="'+field.key+'"><option value="public"'+(itemAccessMode(item)==="public"?' selected':'')+'>公开</option><option value="password"'+(itemAccessMode(item)==="password"?' selected':'')+'>密码</option><option value="clue"'+(itemAccessMode(item)==="clue"?' selected':'')+'>线索</option></select></label>';if(field.type==="clues")return '<label class="editor-field"><span class="editor-label">'+field.label+'</span><select data-data-field="'+field.key+'" multiple size="3">'+clueOptions(value)+'</select></label>';var input=field.type==="textarea"?'<textarea data-data-field="'+field.key+'">'+escapeHtml(value)+'</textarea>':'<input type="'+(field.type||"text")+'" data-data-field="'+field.key+'" value="'+escapeHtml(value)+'">';return '<label class="editor-field"><span class="editor-label">'+escapeHtml(field.label)+'</span>'+input+'</label>'}).join("")}else fields.innerHTML="";document.getElementById("devicePinInput").value=state.phoneData.settings.pin;document.getElementById("vaultPinInput").value=state.phoneData.settings.vaultPin;document.getElementById("languageInput").value=lang();renderAccessEditor();renderClueEditor()}
+  function datasetForApp(id){return {gallery:"gallery",camera:"gallery",files:"gallery",phone:"calls",notes:"notes",calendar:"calendar",browser:"browser",music:"music",social:"social",mail:"mail"}[id]||""}
+  function itemAccessMode(item){return item.accessMode&&item.accessMode!=="public"?item.accessMode:item.locked?"password":"public"}
+  function recordIsAccessible(item){var mode=itemAccessMode(item);return mode==="public"||state.phoneData.progress.unlockedRecords.includes(item.id)||mode==="clue"&&cluesSatisfied(Array.isArray(item.clueIds)?item.clueIds:String(item.clueIds||"").split(",").filter(Boolean))}
+  function lockedRecordMarkup(item,appId){var mode=itemAccessMode(item);var title=item.title||item.subject||item.contact||localized("私密内容","비공개 콘텐츠","非公開コンテンツ");return '<article class="phone-card"><div class="phone-card-title">🔒　'+escapeHtml(title)+'</div><div class="phone-card-meta">'+(mode==="clue"?localized("需要发现关联线索","연결된 단서를 찾아야 합니다","関連する手がかりが必要です"):localized("需要密码","비밀번호가 필요합니다","パスコードが必要です"))+'</div><button class="phone-primary" data-action="unlock-record" data-record-app="'+escapeHtml(appId)+'" data-record-id="'+escapeHtml(item.id)+'">'+localized("尝试解锁","잠금 해제","ロック解除")+'</button></article>'}
+  function clueSourceMarkup(appId){var clues=state.phoneData.clues.filter(function(clue){return clue.sourceApp===appId});return clues.map(function(clue){var found=state.phoneData.progress.foundClues.includes(clue.id);return '<div class="clue-strip"><strong>'+escapeHtml(clue.title||localized("待命名线索","이름 없는 단서","未命名の手がかり"))+'</strong>'+(clue.sourceRecordId?'<span> · '+escapeHtml(clue.sourceRecordId)+'</span>':"")+'<div>'+escapeHtml(found?(clue.text||localized("线索已发现","단서를 찾았습니다","手がかりを発見しました")):localized("这里可能藏有线索","여기에 단서가 있을 수 있습니다","ここに手がかりがあるかもしれません"))+'</div>'+(found?'<span>✓ '+localized("已记录","기록됨","記録済み")+'</span>':'<button data-action="find-clue" data-clue-id="'+escapeHtml(clue.id)+'">'+localized("查看并发现","확인하고 발견","確認して発見")+'</button>')+'</div>'}).join("")}
+  function inlineFieldHtml(dataset,item,index,field){var value=item[field.key]===undefined?"":item[field.key];var attr='data-inline-dataset="'+dataset+'" data-inline-index="'+index+'" data-inline-field="'+field.key+'"';if(field.type==="checkbox")return '<label>'+escapeHtml(field.label)+'<input type="checkbox" '+attr+(value?' checked':'')+'></label>';if(field.type==="access")return '<label>'+escapeHtml(field.label)+'<select '+attr+'><option value="public"'+(itemAccessMode(item)==="public"?' selected':'')+'>公开</option><option value="password"'+(itemAccessMode(item)==="password"?' selected':'')+'>密码</option><option value="clue"'+(itemAccessMode(item)==="clue"?' selected':'')+'>线索</option></select></label>';if(field.type==="clues")return '<label>'+escapeHtml(field.label)+'<select multiple '+attr+'>'+state.phoneData.clues.map(function(clue){var selected=(Array.isArray(value)?value:String(value||"").split(",")).includes(clue.id);return '<option value="'+escapeHtml(clue.id)+'"'+(selected?' selected':'')+'>'+escapeHtml(clue.title||clue.id)+'</option>'}).join("")+'</select></label>';if(field.key==="src"&&String(value).startsWith("data:image/"))return '<div class="editor-help">图片已上传，可从照片 App 重新导入更换。</div>';var control=field.type==="textarea"?'<textarea '+attr+'>'+escapeHtml(value)+'</textarea>':'<input type="'+(field.type||"text")+'" '+attr+' value="'+escapeHtml(value)+'">';return '<label>'+escapeHtml(field.label)+control+'</label>'}
+  function renderInlineEditorForApp(id){var dataset=datasetForApp(id);if(id==="contacts")return '<details class="inline-editor"><summary>在手机内编辑通讯录</summary>'+state.profiles.map(function(profile,index){return '<div class="inline-record"><strong>'+escapeHtml(profile.displayName)+'</strong><input data-inline-profile-index="'+index+'" data-inline-profile-field="displayName" value="'+escapeHtml(profile.displayName)+'" aria-label="显示名称"><input data-inline-profile-index="'+index+'" data-inline-profile-field="nickname" value="'+escapeHtml(profile.nickname)+'" placeholder="昵称"><input data-inline-profile-index="'+index+'" data-inline-profile-field="status" value="'+escapeHtml(profile.status)+'" placeholder="状态"><input type="url" data-inline-profile-index="'+index+'" data-inline-profile-field="avatar" value="'+escapeHtml(profile.avatar.startsWith("data:image/")?"":profile.avatar)+'" placeholder="头像网址（或在后台上传图片）"></div>'}).join("")+'</details>';
+    if(!dataset)return '<details class="inline-editor"><summary>在手机内编辑</summary><p class="editor-help">完整档案与访问规则请使用独立制作后台。</p></details>';
+    var rows=state.phoneData[dataset].map(function(item,index){return '<details class="inline-record"><summary>'+escapeHtml(dataItemLabel(item,index))+'</summary>'+dataSchemas[dataset].map(function(field){return inlineFieldHtml(dataset,item,index,field)}).join("")+'<div class="inline-actions"><span class="editor-help">保存时自动同步</span><button data-action="inline-delete" data-dataset="'+dataset+'" data-index="'+index+'">删除此项</button></div></details>'}).join("");
+    return '<details class="inline-editor" open><summary>'+localized("在手机内编辑内容","휴대전화에서 콘텐츠 편집","スマホ内でコンテンツを編集")+'</summary><div class="inline-actions"><button data-action="inline-add" data-dataset="'+dataset+'">＋ '+localized("新增项目","항목 추가","項目を追加")+'</button>'+(dataset==="gallery"?'<button data-action="upload-gallery">导入照片</button>':"")+'</div>'+rows+'</details>'}
+  function renderAppScreen(id){
+    if(!appAccessGranted(id)){showAppGate(id);return}
+    var title=appLabel(id);document.getElementById("appScreenTitle").textContent=title;var data=state.phoneData;var content="";var dataset=datasetForApp(id);
+    document.getElementById("appScreenAction").innerHTML='<button class="editor-button" data-action="toggle-inline-edit">'+(phoneInlineEdit?localized("完成","완료","完了"):localized("编辑","편집","編集"))+'</button>';
+    if(id==="gallery"){
+      var photos=data.gallery;content='<div class="gallery-tools"><span class="phone-card-meta">'+photos.length+localized(" 张照片","장의 사진","枚の写真")+'</span><button class="phone-primary" data-action="upload-gallery">＋ '+localized("导入照片","사진 가져오기","写真を追加")+'</button></div>';
+      content+=photos.length?'<div class="gallery-grid">'+photos.map(function(item){return recordIsAccessible(item)?'<button class="gallery-tile" data-photo-id="'+escapeHtml(item.id)+'">'+(safeImageSource(item.src)?'<img src="'+escapeHtml(item.src)+'" alt="'+escapeHtml(item.title||"")+'">':escapeHtml(item.title||"待添加照片"))+'</button>':'<button class="gallery-tile" data-action="unlock-record" data-record-app="gallery" data-record-id="'+escapeHtml(item.id)+'">🔒<br>'+escapeHtml(item.title||"私密照片")+'</button>'}).join("")+'</div>':emptyApp(localized("相册还没有照片。导入你自己的图片。","앨범이 비어 있습니다. 직접 사진을 가져오세요.","アルバムは空です。写真を読み込めます。"));
+    }else if(id==="camera"){
+      content='<article class="phone-card" style="min-height:280px;background:linear-gradient(145deg,#262831,#606975);display:grid;place-items:center;color:#fff"><div style="text-align:center"><div style="font-size:45px">◉</div><div class="phone-card-title">'+localized("相机","카메라","カメラ")+'</div><div class="phone-card-meta" style="color:#ddd">'+localized("选择照片加入咲哉的照片图库","사진을 선택해 갤러리에 추가","写真を選んでアルバムに追加")+'</div><button class="phone-primary" data-action="upload-gallery" style="margin-top:14px">'+localized("导入照片","사진 가져오기","写真を追加")+'</button></div></article>';
+    }else if(id==="phone"){
+      content='<article class="phone-card"><div class="phone-card-title">'+localized("拨号","전화 걸기","ダイヤル")+'</div><input class="dial-number" id="dialInput" type="tel" inputmode="tel" placeholder="输入号码" aria-label="输入号码"><div class="dialpad">'+["1","2","3","4","5","6","7","8","9","*","0","#"].map(function(digit){return '<button type="button" data-dial-digit="'+digit+'">'+digit+'</button>'}).join("")+'</div><p class="dialer-hint">'+localized("原型模拟：不会拨打真实电话。","프로토타입 전용: 실제 전화는 걸리지 않습니다.","プロトタイプの表示のみで、実際の発信はしません。")+'</p><button class="phone-primary" style="display:block;width:100%" data-action="mock-call">'+localized("记录模拟拨出","발신 기록 추가","発信履歴を追加")+'</button></article><div class="phone-card"><div class="phone-card-title">'+localized("通话记录","통화 기록","通話履歴")+'</div></div>'+(data.calls.length?data.calls.slice().reverse().map(function(item){return phoneCard(item.contact||item.number||"未知联系人",(item.direction||"")+(item.time?" · "+item.time:""),item.number&&item.contact?item.number:"" )}).join(""):emptyApp("暂无通话记录。"));
+    }else if(id==="contacts"){
+      content=state.profiles.map(function(profile){return phoneCard(profile.displayName,[profile.nickname,profile.status].filter(Boolean).join(" · "),"")}).join("")||emptyApp("通讯录为空。");
+    }else if(id==="files"){
+      content=data.gallery.length?data.gallery.map(function(item){return recordIsAccessible(item)?phoneCard(item.title||"照片文件",item.date,item.caption):lockedRecordMarkup(item,"files")}).join(""):emptyApp("文件夹暂时为空。");
+    }else if(id==="notes"){
+      content=data.notes.length?data.notes.map(function(item){return recordIsAccessible(item)?phoneCard(item.title||"无标题",item.date,item.body||""):lockedRecordMarkup(item,"notes")}).join(""):emptyApp("暂无备忘录。");
+    }else if(id==="calendar"){
+      content=data.calendar.length?data.calendar.slice().sort(function(a,b){return (a.date||"").localeCompare(b.date||"")}).map(function(item){return phoneCard(item.title,(item.date||"")+(item.time?" · "+item.time:""),item.detail||"")}).join(""):emptyApp("暂无日历事项。");
+    }else if(id==="browser"){
+      content=data.browser.length?data.browser.slice().reverse().map(function(item){return phoneCard(item.title,item.time,item.url||"")}).join(""):emptyApp("暂无 Safari 浏览记录。");
+    }else if(id==="music"){
+      content=data.music.length?data.music.map(function(item){return '<article class="phone-card"><div class="phone-card-title">♫　'+escapeHtml(item.title||"未命名曲目")+'</div><div class="phone-card-meta">'+escapeHtml([item.artist,item.album,item.time].filter(Boolean).join(" · ")||"")+'</div>'+(item.source?'<audio controls preload="none" src="'+escapeHtml(item.source)+'" style="width:100%;margin-top:10px"></audio>':"")+'</article>'}).join(""):emptyApp("暂无音乐记录。可在后台填写曲目与音频网址。");
+    }else if(id==="mail"){
+      content=data.mail.length?data.mail.map(function(item){return recordIsAccessible(item)?phoneCard(item.subject||"无主题",item.sender+(item.time?" · "+item.time:""),item.body||""):lockedRecordMarkup(item,"mail")}).join(""):emptyApp("收件箱为空。");
+    }else if(id==="social"){
+      content=data.social.length?data.social.slice().reverse().map(function(item){return phoneCard(item.author||item.platform,item.time,item.text||"")}).join(""):emptyApp("暂无社交动态。");
+    }else if(id==="settings"){
+      content='<article class="phone-card"><div class="phone-card-title">手机设置</div><div class="phone-card-meta">锁屏密码：'+(data.settings.pin?"已设置":"未设置")+' · 私密密码：'+(data.settings.vaultPin?"已设置":"未设置")+'</div><p class="phone-card-body">密码不会预设，也不是加密保护。应用锁和线索可在独立制作后台设置。</p></article><label class="phone-form-field">显示语言<select id="phoneLanguageSelect"><option value="zh-CN">简体中文</option><option value="ko">한국어</option><option value="ja">日本語</option></select></label><button class="phone-primary" data-action="reset-progress">重置解锁进度</button><p class="dialer-hint">只清已发现线索与解锁状态，不删除内容或聊天。</p><a class="phone-primary" id="mobileStudioLink" href="?studio=1" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-top:10px">打开独立制作后台</a>';
+    }else if(id==="vault"){
+      var privateEntries=data.notes.filter(function(item){return itemAccessMode(item)!=="public"}).map(function(item){return recordIsAccessible(item)?phoneCard(item.title||"私密便签",item.date,item.body||""):lockedRecordMarkup(item,"notes")}).concat(data.gallery.filter(function(item){return itemAccessMode(item)!=="public"}).map(function(item){return recordIsAccessible(item)?phoneCard(item.title||"私密照片",item.date,item.caption||""):lockedRecordMarkup(item,"gallery")}));
+      content='<article class="phone-card"><div class="phone-card-title">私密空间</div><div class="phone-card-meta">仅展示你标记为密码或线索解锁的内容。</div></article>'+(privateEntries.join("")||emptyApp("还没有私密内容。"));
+    }
+    var clueMarkup=clueSourceMarkup(id);if(clueMarkup)content=clueMarkup+content;
+    if(phoneInlineEdit)content+=renderInlineEditorForApp(id);
+    document.getElementById("appScreenContent").innerHTML=content;
+    var languageSelect=document.getElementById("phoneLanguageSelect");if(languageSelect)languageSelect.value=lang();
+  }
+  function newDataItem(key){var now="";if(key==="gallery")return {id:"photo-"+Date.now(),title:"",date:now,caption:"",src:"",locked:false,accessMode:"public",clueIds:[]};if(key==="calls")return {id:"call-"+Date.now(),contact:"",number:"",direction:"未接来电",time:"",duration:""};if(key==="notes")return {id:"note-"+Date.now(),title:"",date:now,body:"",locked:false,accessMode:"public",clueIds:[]};if(key==="calendar")return {id:"event-"+Date.now(),title:"",date:"",time:"",detail:""};if(key==="browser")return {id:"history-"+Date.now(),title:"",url:"",time:""};if(key==="music")return {id:"track-"+Date.now(),title:"",artist:"",album:"",time:"",source:""};if(key==="mail")return {id:"mail-"+Date.now(),sender:"",subject:"",time:"",body:"",accessMode:"public",clueIds:[]};return {id:"post-"+Date.now(),platform:"",author:"",time:"",text:""}}
+  function renderPhoneChatEditor(){var box=document.getElementById("phoneChatEditor");if(!box)return;if(!chatInlineEdit){box.classList.remove("open");box.innerHTML="";return}var rooms=state.rooms.filter(function(room){return room.app===activeChatApp});box.classList.add("open");box.innerHTML='<div class="inline-actions"><strong>手机内编辑聊天室</strong><button data-action="phone-add-room">＋ 新建空聊天室</button></div>'+rooms.map(function(room){return '<label class="editor-help">'+escapeHtml(room.app)+'<input data-inline-room-title="'+escapeHtml(room.id)+'" value="'+escapeHtml(room.title)+'"></label>'}).join("")+'<span class="editor-help">已有台词不变；消息可在对话中追加，或在独立后台逐条编辑。</span>'}
+  function renderPhoneMessageEditor(){var box=document.getElementById("phoneMessageEditor");if(!box)return;if(!messageInlineEdit){box.classList.remove("open");box.innerHTML="";return}box.classList.add("open");var rows=currentRoom().messages.map(function(message,index){return '<details class="inline-record"><summary>第 '+(index+1)+' 条 · '+escapeHtml(message.speaker||"系统")+'</summary><select data-phone-message-index="'+index+'" data-phone-message-field="speaker">'+speakerOptions(message.speaker)+'</select><input type="time" data-phone-message-index="'+index+'" data-phone-message-field="time" value="'+escapeHtml(message.time||"")+'"><textarea data-phone-message-index="'+index+'" data-phone-message-field="text">'+escapeHtml(message.text)+'</textarea></details>'}).join("");box.innerHTML='<strong>手机内编辑消息</strong><details class="inline-editor"><summary>编辑现有消息（'+currentRoom().messages.length+' 条）</summary>'+rows+'</details><strong>追加新消息</strong><select id="phoneMessageSpeaker">'+profileOptions(state.selfId)+'</select><input id="phoneMessageTime" type="time" value=""><textarea id="phoneMessageText" placeholder="输入要追加的台词"></textarea><button class="phone-primary" data-action="phone-add-message">添加消息</button><div class="editor-help">现有原文保持原样，只有你手动编辑的字段才会改变。</div>'}
+  function renderAccessEditor(){var appSelect=document.getElementById("accessAppSelect");if(!appSelect)return;appSelect.innerHTML=appCatalog.map(function(app){return '<option value="'+app.id+'">'+escapeHtml(appLabel(app.id))+'</option>'}).join("");if(!appCatalog.some(function(app){return app.id===selectedAccessApp}))selectedAccessApp="vault";appSelect.value=selectedAccessApp;var rule=appRule(selectedAccessApp);document.getElementById("accessModeSelect").value=rule.mode;document.getElementById("accessPasswordInput").value=rule.password;document.getElementById("accessClueSelect").innerHTML=clueOptions(rule.clueIds);Array.from(document.getElementById("accessClueSelect").options).forEach(function(option){option.selected=rule.clueIds.includes(option.value)})}
+  function findClue(id){var clue=state.phoneData.clues.find(function(item){return item.id===id});if(!clue)return false;if(clue.answer){var answer=window.prompt("输入你在内容中发现的线索答案：");if(answer===null||answer.trim().toLocaleLowerCase()!==clue.answer.trim().toLocaleLowerCase()){alert("线索尚未匹配。内容不会被修改。");return false}}if(!state.phoneData.progress.foundClues.includes(id))state.phoneData.progress.foundClues.push(id);saveState();renderEditor();if(activePhoneApp)renderAppScreen(activePhoneApp);if(activeChatApp)renderRoomList();return true}
+  function unlockPhoneRecord(appId,recordId){var dataset=datasetForApp(appId)||appId;var item=(state.phoneData[dataset]||[]).find(function(entry){return entry.id===recordId});if(!item)return;var mode=itemAccessMode(item);if(mode==="password"){var pin=state.phoneData.settings.vaultPin;if(!pin){alert("私密内容密码尚未设置。请在制作后台设置，不存在预设故事密码。");return}var entered=window.prompt("输入私密内容密码：");if(entered!==pin){if(entered!==null)alert("密码不正确。");return}}else if(mode==="clue"){var ids=Array.isArray(item.clueIds)?item.clueIds:String(item.clueIds||"").split(",").filter(Boolean);if(!cluesSatisfied(ids)){var names=ids.map(function(id){var clue=state.phoneData.clues.find(function(entry){return entry.id===id});return clue?clue.title:""}).filter(Boolean);alert(names.length?"先去发现线索："+names.join("、"):"此内容尚未关联线索，请在制作后台配置。");return}}if(!state.phoneData.progress.unlockedRecords.includes(recordId))state.phoneData.progress.unlockedRecords.push(recordId);saveState();renderAppScreen(activePhoneApp)}
+  function resetProgress(){if(!confirm("只重置已发现线索和解锁进度；聊天原文、角色、照片、应用内容、密码与线索设定均保留。继续？"))return;state.phoneData.progress={foundClues:[],unlockedApps:[],unlockedRecords:[]};vaultUnlocked=false;saveState();renderAll();if(activePhoneApp)renderAppScreen(activePhoneApp)}
+  function newDataItem(key){var now="";if(key==="gallery")return {id:"photo-"+Date.now(),title:"",date:now,caption:"",src:"",locked:false,accessMode:"public",clueIds:[]};if(key==="calls")return {id:"call-"+Date.now(),contact:"",number:"",direction:"未接来电",time:"",duration:""};if(key==="notes")return {id:"note-"+Date.now(),title:"",date:now,body:"",locked:false,accessMode:"public",clueIds:[]};if(key==="calendar")return {id:"event-"+Date.now(),title:"",date:"",time:"",detail:""};if(key==="browser")return {id:"history-"+Date.now(),title:"",url:"",time:""};if(key==="music")return {id:"track-"+Date.now(),title:"",artist:"",album:"",time:"",source:""};if(key==="mail")return {id:"mail-"+Date.now(),sender:"",subject:"",time:"",body:"",accessMode:"public",clueIds:[]};return {id:"post-"+Date.now(),platform:"",author:"",time:"",text:""}}
+  function importPhotoFiles(files){var selected=Array.prototype.slice.call(files||[]);selected.forEach(function(file){if(!file.type||!file.type.startsWith("image/"))return;var reader=new FileReader();reader.onload=function(){var image=new Image();image.onload=function(){var scale=Math.min(1,1280/Math.max(image.width,image.height));var canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);state.phoneData.gallery.push({id:"photo-"+Date.now()+"-"+Math.random().toString(36).slice(2,6),title:file.name.replace(/\.[^.]+$/,""),date:"",caption:"",src:canvas.toDataURL("image/jpeg",0.84),locked:false});selectedDataIndex=state.phoneData.gallery.length-1;saveState();renderPhoneEditor();if(activePhoneApp==="gallery")renderAppScreen("gallery")};image.src=reader.result};reader.readAsDataURL(file)})}
+  function showChatAppFromHome(app){openPhoneApp(app)}
+  roomList.addEventListener("click",function(event){var clue=event.target.closest('[data-action="find-clue"]');if(clue){findClue(clue.dataset.clueId);return}var row=event.target.closest("[data-room-id]");if(row)openRoom(row.dataset.roomId)});
+  roomList.addEventListener("keydown",function(event){var row=event.target.closest("[data-room-id]");if(row&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openRoom(row.dataset.roomId)}});
+  document.getElementById("roomSelect").addEventListener("change",function(event){state.activeRoomId=event.target.value;activeChatApp=currentRoom().app;saveState();renderAll()});
+  document.getElementById("roomEditorView").addEventListener("input",function(event){
+    var field=event.target.dataset.roomField;
+    if(field){currentRoom()[field]=event.target.value;if(field==="app")activeChatApp=currentRoom().app;renderPreview();saveState()}
+    if(event.target.id==="messageSearch")applyMessageFilter();
+  });
+  document.getElementById("roomEditorView").addEventListener("change",function(event){
+    var field=event.target.dataset.roomField;
+    if(field){currentRoom()[field]=event.target.value;if(field==="app")activeChatApp=currentRoom().app;renderPreview();saveState()}
+    if(event.target.dataset.memberId){var room=currentRoom();var id=event.target.dataset.memberId;if(event.target.checked&&!room.memberIds.includes(id))room.memberIds.push(id);if(!event.target.checked)room.memberIds=room.memberIds.filter(function(memberId){return memberId!==id});renderPreview();saveState()}
+  });
+  document.getElementById("messageEditorList").addEventListener("input",function(event){var field=event.target.dataset.messageField;if(!field)return;var message=currentRoom().messages[Number(event.target.dataset.index)];if(!message)return;message[field]=event.target.value;renderPreview();saveState()});
+  document.getElementById("messageEditorList").addEventListener("change",function(event){var field=event.target.dataset.messageField;if(!field)return;var message=currentRoom().messages[Number(event.target.dataset.index)];if(!message)return;message[field]=event.target.value;renderPreview();saveState()});
+  document.getElementById("messageEditorList").addEventListener("click",function(event){var button=event.target.closest("[data-action]");if(!button)return;var room=currentRoom();var index=Number(button.dataset.index);var action=button.dataset.action;if(action==="delete")room.messages.splice(index,1);if(action==="up"&&index>0){var before=room.messages[index-1];room.messages[index-1]=room.messages[index];room.messages[index]=before}if(action==="down"&&index<room.messages.length-1){var after=room.messages[index+1];room.messages[index+1]=room.messages[index];room.messages[index]=after}renderAll();saveState()});
+  document.getElementById("addMessageButton").addEventListener("click",function(){var room=currentRoom();var last=latestMessage(room);room.messages.push({type:"message",speaker:state.selfId,text:"",time:last&&last.time?last.time:"15:16",reply:""});renderAll();saveState();var area=document.getElementById("messageEditorList");area.scrollTop=area.scrollHeight});
+  document.getElementById("addRoomButton").addEventListener("click",function(){var id="room-"+Date.now();state.rooms.push({id:id,title:"新聊天室",app:currentRoom().app,dateLabel:"日期待定",unread:"",memberIds:[state.selfId],messages:[]});state.activeRoomId=id;renderAll();saveState()});
+  document.getElementById("deleteRoomButton").addEventListener("click",function(){if(state.rooms.length<2){alert("至少保留一个聊天室。");return}if(!confirm("删除这个聊天室及其中的消息？"))return;state.rooms=state.rooms.filter(function(room){return room.id!==state.activeRoomId});state.activeRoomId=state.rooms[0].id;renderAll();saveState()});
+  document.getElementById("profileSelect").addEventListener("change",function(event){state.selectedProfileId=event.target.value;renderProfileEditor()});
+  document.getElementById("profileEditorView").addEventListener("input",function(event){var field=event.target.dataset.profileField;if(!field)return;var profile=currentProfile();profile[field]=event.target.value;document.getElementById("profilePreviewName").textContent=profile.displayName;document.getElementById("profilePreviewMeta").textContent=[profile.nickname,profile.status].filter(Boolean).join(" · ")||"暂无昵称或状态";if(field==="avatar")document.getElementById("profilePreviewAvatar").innerHTML=safeImageSource(profile.avatar)?'<img src="'+escapeHtml(profile.avatar)+'" alt="">':escapeHtml((profile.displayName||profile.id).slice(0,1));renderPreview();renderRoomSelect();renderMemberPicker();renderHomeScreen();if(activePhoneApp)renderAppScreen(activePhoneApp);saveState()});
+  document.getElementById("profileEditorView").addEventListener("change",function(event){var field=event.target.dataset.profileField;if(field){currentProfile()[field]=event.target.value;renderPreview();renderRoomSelect();renderMemberPicker();renderHomeScreen();if(activePhoneApp)renderAppScreen(activePhoneApp);saveState()}});
+  document.getElementById("addProfileButton").addEventListener("click",function(){var id="profile-"+Date.now();state.profiles.push({id:id,displayName:"新角色",nickname:"",status:"",avatar:""});state.selectedProfileId=id;renderAll();saveState()});
+  document.getElementById("deleteProfileButton").addEventListener("click",function(){var profile=currentProfile();var used=state.rooms.some(function(room){return room.memberIds.includes(profile.id)||room.messages.some(function(message){return message.speaker===profile.id})});if(used){alert("这个角色仍出现在聊天室或消息中，暂时不能删除。");return}if(state.profiles.length<2){alert("至少保留一个角色。");return}state.profiles=state.profiles.filter(function(item){return item.id!==profile.id});state.selectedProfileId=state.profiles[0].id;if(state.selfId===profile.id)state.selfId=state.profiles[0].id;renderAll();saveState()});
+  document.getElementById("clearAvatarButton").addEventListener("click",function(){currentProfile().avatar="";renderProfileEditor();renderPreview();saveState()});
+  document.getElementById("avatarUpload").addEventListener("change",function(event){var file=event.target.files&&event.target.files[0];if(!file)return;if(!file.type.startsWith("image/")){alert("请选择图片文件。");event.target.value="";return}var reader=new FileReader();reader.onload=function(){var image=new Image();image.onload=function(){var canvas=document.createElement("canvas");var scale=Math.min(1,640/Math.max(image.width,image.height));canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);currentProfile().avatar=canvas.toDataURL("image/jpeg",0.82);renderProfileEditor();renderPreview();saveState()};image.onerror=function(){alert("无法读取这张图片。")};image.src=reader.result};reader.readAsDataURL(file)});
+  document.querySelectorAll("[data-editor-tab]").forEach(function(button){button.addEventListener("click",function(){activeTab=button.dataset.editorTab;renderEditor()})});
+  document.getElementById("appGrid").addEventListener("click",function(event){var move=event.target.closest("[data-move-direction]");if(move){event.preventDefault();event.stopPropagation();var order=state.phoneData.homeLayout;var index=order.indexOf(move.dataset.moveApp);var next=index+(move.dataset.moveDirection==="up"?-1:1);if(index>=0&&next>=0&&next<order.length){var swap=order[index];order[index]=order[next];order[next]=swap;saveState();renderHomeScreen()}return}var button=event.target.closest("[data-app]");if(button&&!homeEditing)openPhoneApp(button.dataset.app)});
+  document.getElementById("homeEditToggle").addEventListener("click",function(){homeEditing=!homeEditing;renderHomeScreen()});
+  document.getElementById("homeSearch").addEventListener("input",renderHomeScreen);
+  document.getElementById("chatInlineEditToggle").addEventListener("click",function(){chatInlineEdit=!chatInlineEdit;renderPhoneChatEditor()});
+  document.getElementById("chatEditButton").addEventListener("click",function(){messageInlineEdit=!messageInlineEdit;renderPhoneMessageEditor()});
+  document.getElementById("phoneChatEditor").addEventListener("click",function(event){var action=event.target.closest('[data-action="phone-add-room"]');if(!action)return;var id="room-"+Date.now();state.rooms.push({id:id,title:"新聊天室",app:activeChatApp||"KakaoTalk",dateLabel:"日期待定",unread:"",memberIds:[state.selfId],messages:[]});state.activeRoomId=id;saveState();renderAll();document.getElementById("listScreen").style.display="flex";document.getElementById("listBar").style.display="flex";document.getElementById("chatScreen").classList.remove("open");chatInlineEdit=true;renderPhoneChatEditor()});
+  document.getElementById("phoneChatEditor").addEventListener("input",function(event){var roomId=event.target.dataset.inlineRoomTitle;if(!roomId)return;var room=state.rooms.find(function(item){return item.id===roomId});if(room){room.title=event.target.value;saveState()}});
+  document.getElementById("phoneChatEditor").addEventListener("change",function(event){if(event.target.dataset.inlineRoomTitle){renderRoomList();renderRoomSelect();renderPreview()}});
+  document.getElementById("phoneMessageEditor").addEventListener("click",function(event){var action=event.target.closest('[data-action="phone-add-message"]');if(!action)return;var text=document.getElementById("phoneMessageText").value.trim();if(!text){alert("先写入消息内容。");return}var room=currentRoom();room.messages.push({type:"message",speaker:document.getElementById("phoneMessageSpeaker").value,text:text,time:document.getElementById("phoneMessageTime").value||"15:16",reply:""});saveState();renderAll();openRoom(room.id);messageInlineEdit=true;renderPhoneMessageEditor()});
+  document.getElementById("phoneMessageEditor").addEventListener("input",function(event){var index=event.target.dataset.phoneMessageIndex;var field=event.target.dataset.phoneMessageField;if(index===undefined||!field)return;var message=currentRoom().messages[Number(index)];if(!message)return;message[field]=event.target.value;saveState();renderMessages(currentRoom());renderPreview()});
+  document.getElementById("phoneMessageEditor").addEventListener("change",function(event){var index=event.target.dataset.phoneMessageIndex;var field=event.target.dataset.phoneMessageField;if(index===undefined||!field)return;var message=currentRoom().messages[Number(index)];if(!message)return;message[field]=event.target.value;saveState();renderMessages(currentRoom());renderPreview()});
+  document.getElementById("homeDock").addEventListener("click",function(event){var button=event.target.closest("[data-app]");if(button)openPhoneApp(button.dataset.app)});
+  document.getElementById("homeButton").addEventListener("click",showHome);
+  document.getElementById("chatHomeButton").addEventListener("click",showHome);
+  document.getElementById("appBackButton").addEventListener("click",showHome);
+  document.getElementById("lockButton").addEventListener("click",lockPhone);
+  document.getElementById("unlockButton").addEventListener("click",unlockPhone);
+  document.getElementById("lockSwipeButton").addEventListener("click",function(){if(state.phoneData.settings.pin){document.getElementById("lockScreen").classList.add("passcode-open");document.getElementById("pinEntry").focus()}else unlockPhone()});
+  document.getElementById("pinEntry").addEventListener("keydown",function(event){if(event.key==="Enter")unlockPhone()});
+  document.getElementById("appScreenContent").addEventListener("click",function(event){
+    var action=event.target.closest("[data-action]");if(action&&action.dataset.action==="toggle-inline-edit"){phoneInlineEdit=!phoneInlineEdit;renderAppScreen(activePhoneApp);return}
+    if(action&&action.dataset.action==="inline-add"){var addList=state.phoneData[action.dataset.dataset];if(addList){addList.push(newDataItem(action.dataset.dataset));saveState();renderPhoneEditor();renderAppScreen(activePhoneApp)}return}
+    if(action&&action.dataset.action==="inline-delete"){var deleteList=state.phoneData[action.dataset.dataset];if(deleteList&&confirm("删除当前项目？")){deleteList.splice(Number(action.dataset.index),1);saveState();renderPhoneEditor();renderAppScreen(activePhoneApp)}return}
+    if(action&&action.dataset.action==="unlock-record"){unlockPhoneRecord(action.dataset.recordApp,action.dataset.recordId);return}
+    if(action&&action.dataset.action==="verify-app"){var appId=action.dataset.app;var appPassword=document.getElementById("appGatePassword");if(appPassword&&appPassword.value===appRule(appId).password){if(!state.phoneData.progress.unlockedApps.includes(appId))state.phoneData.progress.unlockedApps.push(appId);saveState();openPhoneApp(appId)}else if(appPassword)alert("密码不正确。");return}
+    if(action&&action.dataset.action==="find-clue"){findClue(action.dataset.clueId);return}
+    if(action&&action.dataset.action==="go-clue-source"){if(action.dataset.app)openPhoneApp(action.dataset.app);else alert("请先在制作后台指定线索来源 App。");return}
+    if(action&&action.dataset.action==="go-home"){showHome();return}
+    if(action&&action.dataset.action==="reset-progress"){resetProgress();return}
+    if(action&&action.dataset.action==="upload-gallery"){document.getElementById("phoneGalleryUpload").click();return}
+    if(action&&action.dataset.action==="unlock-vault"){if(unlockVault())renderAppScreen("vault");return}
+    var digit=event.target.closest("[data-dial-digit]");if(digit){var dialInput=document.getElementById("dialInput");if(dialInput)dialInput.value+=digit.dataset.dialDigit;return}
+    if(action&&action.dataset.action==="mock-call"){var dialNumber=document.getElementById("dialInput");var number=dialNumber?dialNumber.value.trim():"";if(number){state.phoneData.calls.push({id:"call-"+Date.now(),contact:"",number:number,direction:localized("呼出","발신","発信"),time:document.getElementById("statusTime").textContent,duration:""});saveState();renderAppScreen("phone")}return}
+    var note=event.target.closest("[data-locked-note]");if(note){if(unlockVault())renderAppScreen("notes");return}
+    var photoButton=event.target.closest("[data-photo-id]");if(photoButton){var photo=state.phoneData.gallery.find(function(item){return item.id===photoButton.dataset.photoId});if(photo&&recordIsAccessible(photo)){var content=document.getElementById("appScreenContent");var detail=document.createElement("article");detail.className="phone-card";detail.innerHTML=(safeImageSource(photo.src)?'<img style="width:100%;max-height:270px;object-fit:contain;border-radius:10px" src="'+escapeHtml(photo.src)+'" alt="">':"")+phoneCard(photo.title,photo.date,photo.caption);content.prepend(detail)}}
+  });
+  function applyInlineField(field){var dataset=field.dataset.inlineDataset;var index=Number(field.dataset.inlineIndex);var name=field.dataset.inlineField;var item=state.phoneData[dataset]&&state.phoneData[dataset][index];if(!item)return;var value=field.type==="checkbox"?field.checked:field.multiple?Array.from(field.selectedOptions).map(function(option){return option.value}):field.value;item[name]=value;if(name==="accessMode")item.locked=value!=="public";saveState()}
+  document.getElementById("appScreenContent").addEventListener("input",function(event){var profileIndex=event.target.dataset.inlineProfileIndex;if(profileIndex!==undefined){var profile=state.profiles[Number(profileIndex)];if(profile){profile[event.target.dataset.inlineProfileField]=event.target.value;saveState();renderHomeScreen()}return}if(event.target.dataset.inlineDataset)applyInlineField(event.target)});
+  document.getElementById("appScreenContent").addEventListener("change",function(event){if(event.target.id==="phoneLanguageSelect"){state.phoneData.settings.language=event.target.value;saveState();renderHomeScreen();renderAppScreen("settings");return}if(event.target.dataset.inlineProfileIndex!==undefined){renderAppScreen(activePhoneApp);renderRoomList();renderPreview();return}if(event.target.dataset.inlineDataset){applyInlineField(event.target);renderPhoneEditor();renderAppScreen(activePhoneApp)}});
+  document.getElementById("phoneGalleryUpload").addEventListener("change",function(event){importPhotoFiles(event.target.files);event.target.value=""});
+  document.getElementById("galleryUpload").addEventListener("change",function(event){importPhotoFiles(event.target.files);event.target.value=""});
+  document.getElementById("dataSetSelect").addEventListener("change",function(event){selectedDataSet=event.target.value;selectedDataIndex=0;renderPhoneEditor()});
+  document.getElementById("dataRecordList").addEventListener("click",function(event){var button=event.target.closest("[data-record-index]");if(!button)return;selectedDataIndex=Number(button.dataset.recordIndex);renderPhoneEditor()});
+  document.getElementById("addDataRecordButton").addEventListener("click",function(){var list=state.phoneData[selectedDataSet];list.push(newDataItem(selectedDataSet));selectedDataIndex=list.length-1;saveState();renderPhoneEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("deleteDataRecordButton").addEventListener("click",function(){var list=state.phoneData[selectedDataSet];if(!list.length)return;if(!confirm("删除当前项目？"))return;list.splice(selectedDataIndex,1);selectedDataIndex=Math.max(0,selectedDataIndex-1);saveState();renderPhoneEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  function applyDataField(event){var field=event.target.dataset.dataField;var item=(state.phoneData[selectedDataSet]||[])[selectedDataIndex];if(!field||!item)return;var value=event.target.type==="checkbox"?event.target.checked:event.target.multiple?selectedIds(event.target):event.target.value;item[field]=value;if(field==="accessMode")item.locked=value!=="public";saveState()}
+  document.getElementById("dataEditorFields").addEventListener("input",function(event){if(event.target.dataset.dataField)applyDataField(event)});
+  document.getElementById("dataEditorFields").addEventListener("change",function(event){if(!event.target.dataset.dataField)return;applyDataField(event);renderPhoneEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("devicePinInput").addEventListener("input",function(event){state.phoneData.settings.pin=event.target.value;saveState()});
+  document.getElementById("vaultPinInput").addEventListener("input",function(event){state.phoneData.settings.vaultPin=event.target.value;vaultUnlocked=false;saveState()});
+  document.getElementById("languageInput").addEventListener("change",function(event){state.phoneData.settings.language=event.target.value;saveState();renderHomeScreen();renderPhoneEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("accessAppSelect").addEventListener("change",function(event){selectedAccessApp=event.target.value;renderAccessEditor()});
+  document.getElementById("accessModeSelect").addEventListener("change",function(event){appRule(selectedAccessApp).mode=event.target.value;saveState();renderAccessEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("accessPasswordInput").addEventListener("input",function(event){appRule(selectedAccessApp).password=event.target.value;saveState()});
+  document.getElementById("accessClueSelect").addEventListener("change",function(event){var rule=appRule(selectedAccessApp);var next=selectedIds(event.target);rule.clueIds=next;if(next.length)rule.mode="clue";state.phoneData.clues.forEach(function(clue){clue.targetAppIds=clue.targetAppIds.filter(function(id){return id!==selectedAccessApp});if(next.includes(clue.id))clue.targetAppIds.push(selectedAccessApp)});saveState();renderAccessEditor();renderClueEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("clueSelect").addEventListener("change",function(event){selectedClueId=event.target.value;renderClueEditor()});
+  document.getElementById("addClueButton").addEventListener("click",function(){var clue={id:"clue-"+Date.now(),title:"",text:"",answer:"",sourceApp:"",sourceRecordId:"",targetAppIds:[]};state.phoneData.clues.push(clue);selectedClueId=clue.id;saveState();renderPhoneEditor()});
+  function saveClueField(field,value){var clue=state.phoneData.clues.find(function(item){return item.id===selectedClueId});if(!clue)return;clue[field]=value;saveState()}
+  document.getElementById("clueTitleInput").addEventListener("input",function(event){saveClueField("title",event.target.value)});
+  document.getElementById("clueTextInput").addEventListener("input",function(event){saveClueField("text",event.target.value)});
+  document.getElementById("clueAnswerInput").addEventListener("input",function(event){saveClueField("answer",event.target.value)});
+  document.getElementById("clueSourceRecordInput").addEventListener("input",function(event){saveClueField("sourceRecordId",event.target.value)});
+  document.getElementById("clueSourceSelect").addEventListener("change",function(event){saveClueField("sourceApp",event.target.value);if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("clueTargetSelect").addEventListener("change",function(event){var clue=state.phoneData.clues.find(function(item){return item.id===selectedClueId});if(!clue)return;syncClueTargets(clue,selectedIds(event.target));saveState();renderPhoneEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("deleteClueButton").addEventListener("click",function(){if(!selectedClueId||!confirm("删除这条线索及其解锁关联？"))return;state.phoneData.clues=state.phoneData.clues.filter(function(clue){return clue.id!==selectedClueId});Object.keys(state.phoneData.accessRules).forEach(function(id){var rule=state.phoneData.accessRules[id];rule.clueIds=rule.clueIds.filter(function(clueId){return clueId!==selectedClueId});if(!rule.clueIds.length&&rule.mode==="clue")rule.mode="public"});state.phoneData.progress.foundClues=state.phoneData.progress.foundClues.filter(function(id){return id!==selectedClueId});selectedClueId="";saveState();renderPhoneEditor();if(activePhoneApp)renderAppScreen(activePhoneApp)});
+  document.getElementById("resetProgressButton").addEventListener("click",resetProgress);
+   document.getElementById("lockCameraButton").addEventListener("click",function(){document.querySelector(".phone").classList.remove("locked");document.getElementById("lockScreen").classList.remove("open");openPhoneApp("camera",true)});
+  document.getElementById("exportButton").addEventListener("click",function(){var blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var link=document.createElement("a");link.href=url;link.download="sakuryo-phone-backup.json";link.click();URL.revokeObjectURL(url);setSaveStatus("备份已导出",false)});
+  document.getElementById("publishButton").addEventListener("click",function(){var page="<!doctype html>\n"+document.documentElement.outerHTML;var uniqueKey="sakuryo-phone-editor-"+Date.now();var encoded=encodeURIComponent(JSON.stringify(state)).replace(/'/g,"%27");page=page.replace('var storageKey = "sakuryo-phone-editor-v1";','var storageKey = "'+uniqueKey+'";');page=page.replace("var embeddedState = null;","var embeddedState = JSON.parse(decodeURIComponent('"+encoded+"')); ");if(!page.includes("var embeddedState = JSON.parse(decodeURIComponent(")){alert("无法生成发布页，请重新打开原始编辑器文件。");return}var blob=new Blob([page],{type:"text/html;charset=utf-8"});var url=URL.createObjectURL(blob);var link=document.createElement("a");link.href=url;link.download="index.html";link.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);setSaveStatus("发布页已生成",false)});
+  document.getElementById("importFile").addEventListener("change",function(event){var file=event.target.files&&event.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){try{var imported=normalizeState(JSON.parse(reader.result));if(!confirm("导入备份会替换当前浏览器中的编辑内容，继续吗？"))return;state=imported;renderAll();saveState();alert("备份已导入。")}catch(error){alert("无法导入："+error.message)}finally{event.target.value=""}};reader.readAsText(file)});
+  document.getElementById("searchInput").addEventListener("input",function(event){var query=event.target.value.trim().toLowerCase();document.querySelectorAll("#roomList [data-room-id]").forEach(function(row){row.style.display=row.dataset.search.includes(query)?"flex":"none"})});
+  renderAll();renderHomeScreen();lockPhone();
+})();
+</script>
+</body>
+</html>
